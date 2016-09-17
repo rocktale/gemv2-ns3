@@ -2,8 +2,6 @@
 #ifndef GEMV2_HELPER_H
 #define GEMV2_HELPER_H
 
-#include "ns3/gemv2.h"
-
 namespace ns3 {
 
 /* ... */

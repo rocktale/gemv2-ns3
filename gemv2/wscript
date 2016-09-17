@@ -3,13 +3,14 @@
 # def options(opt):
 #     pass
 
-# def configure(conf):
-#     conf.check_nonfatal(header_name='stdint.h', define_name='HAVE_STDINT_H')
+def configure(conf):
+    # check for the boost geometry main header
+    conf.check(mandatory=True, header_name='boost/geometry.hpp', use='BOOST_GEOMETRY')
 
 def build(bld):
-    module = bld.create_ns3_module('gemv2', ['core'])
+    module = bld.create_ns3_module('gemv2', ['core', 'propagation'])
     module.source = [
-        'model/gemv2.cc',
+        'model/gemv2-propagation-loss-model.cc',
         'helper/gemv2-helper.cc',
         ]
 
@@ -21,7 +22,7 @@ def build(bld):
     headers = bld(features='ns3header')
     headers.module = 'gemv2'
     headers.source = [
-        'model/gemv2.h',
+        'model/gemv2-propagation-loss-model.h',
         'helper/gemv2-helper.h',
         ]
 
