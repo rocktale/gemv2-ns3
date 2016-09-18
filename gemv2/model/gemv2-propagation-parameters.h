@@ -20,6 +20,8 @@
 
 namespace ns3
 {
+namespace gemv2
+{
 
 /*!
  * @brief Propagation parameters for GEMV^2.
@@ -27,7 +29,7 @@ namespace ns3
  * This is only a subset intended to be used with different
  * values for V2V and V2I links.
  */
-struct Gemv2PropagationParameters
+struct PropagationParameters
 {
   // Path loss exponents
 
@@ -64,7 +66,7 @@ struct Gemv2PropagationParameters
    * "Geometry-Based Vehicle-to-Vehicle Channel Modeling for Large-Scale
    * Simulation" by Boban, Barros, and Tonguz.
    */
-  Gemv2PropagationParameters ()
+  PropagationParameters ()
     : pathLossExpNLOSb (2.9), pathLossExpNLOSf (2.7),
       smallScaleMinFadingLOS (3.3),
       smallScaleMinFadingNLOSv (3.8),
@@ -79,6 +81,7 @@ struct Gemv2PropagationParameters
 
 };
 
+}  // namespace gemv2
 }  // namespace ns3
 
 #endif /* GEMV2_PROPAGATION_PARAMETERS_H */

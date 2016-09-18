@@ -20,6 +20,9 @@
 
 #include <ns3/propagation-loss-model.h>
 
+#include "gemv2-types.h"
+#include "gemv2-propagation-parameters.h"
+
 namespace ns3 {
 
 class Gemv2PropagationLossModel : public PropagationLossModel
@@ -62,6 +65,44 @@ private:
   int64_t
   DoAssignStreams (int64_t stream) override;
 
+
+  /*
+   * Parameters of the model
+   */
+
+  //! Frequency of the signal
+  double m_frequency;
+
+  // Communication ranges
+
+  //! Maximum communication range for LOS [m]
+  double m_maxLOSCommRange;
+  //! Maximum communication range for NLOSv [m]
+  double m_maxNLOSvCommRange;
+  //! Maximum communication range for NLOSb [m]
+  double m_maxNLOSbCommRange;
+
+  // Propagation parameters
+
+  //! V2V propagation parameters
+  gemv2::PropagationParameters m_v2vPropagation;
+
+  //! Model for the NLOSv links
+  gemv2::NLOSvModelType m_modelNLOSv;
+
+  //! Loss due to obstructing vehicles (simple model) [db]
+  gemv2::MinMedMaxDoubleValue m_lossPerVehicleNLOSvSimple;
+
+  //! Model for NLOSb links
+  gemv2::NLOSbModelType m_modelNLOSb;
+
+  // Reflection parameters
+
+  //! Relative permittivity of buildings
+  double m_permittivityBuildings;
+
+  //! Relative permittivity of vehicles (approximation)
+  double m_permittivityVehicles;
 };
 
 }  // namespace ns3
