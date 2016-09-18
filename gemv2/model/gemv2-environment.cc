@@ -17,7 +17,44 @@
  */
 #include "gemv2-environment.h"
 
+#include <boost/geometry/io/wkt/wkt.hpp>
+
 #include <ns3/log.h>
+#include <ns3/assert.h>
+
+
+namespace {
+
+/*!
+ * @brief Generic find in range for various tree types.
+ * @param tree		Tree to query
+ * @param position	Position to query for
+ * @param range		Maximum distance from @a position
+ * @param result	Found objects
+ */
+template<typename TreeType, typename OutputType>
+void
+genericFindInRange (const TreeType& tree, const ns3::gemv2::Point2d& position,
+		    double range, OutputType& result)
+{
+  // make bounding box around circle
+  ns3::gemv2::Box2d bBox =
+      {{position.x () - range/2, position.y () - range/2},
+       {position.x () + range/2, position.y () + range/2}};
+
+  // query the tree with bounding box and range condition
+  tree.query (
+      boost::geometry::index::intersects (bBox) &&
+      boost::geometry::index::satisfies (
+	  [range, position](const typename TreeType::value_type& v)
+	  {
+	    return boost::geometry::distance (position, v->GetShape ()) <= range;
+	  }),
+
+	  std::back_inserter (result));
+}
+
+}
 
 namespace ns3 {
 
@@ -39,6 +76,82 @@ Environment::GetGlobal ()
     }
 
   return e;
+}
+
+void
+Environment::AddBuilding (Ptr<Building> building)
+{
+  NS_ASSERT_MSG (building, "building must not be null");
+  m_buildings.insert (building);
+}
+
+void
+Environment::AddFoliage (Ptr<Foliage> foliage)
+{
+  NS_ASSERT_MSG (foliage, "foliage must not be null");
+  m_foliage.insert (foliage);
+}
+
+void
+Environment::intersect (const LineSegment2d& line, BuildingList& outBuildings)
+{
+  NS_LOG_FUNCTION (this << boost::geometry::wkt (line));
+
+  m_buildings.query (
+      boost::geometry::index::intersects (line),
+      std::back_inserter (outBuildings));
+
+  NS_LOG_LOGIC ("Found " << outBuildings.size ()
+		<< " intersections with buildings");
+}
+
+void
+Environment::intersect (const LineSegment2d& line, FoliageList& outFoliage)
+{
+  NS_LOG_FUNCTION (this << boost::geometry::wkt (line));
+
+  m_foliage.query (
+      boost::geometry::index::intersects (line),
+      std::back_inserter (outFoliage));
+
+  NS_LOG_LOGIC ("Found " << outFoliage.size ()
+		<< " intersections with foliage");
+}
+
+void
+Environment::intersect (const LineSegment2d& line, VehicleList& outVehicles)
+{
+  NS_LOG_FUNCTION (this << boost::geometry::wkt (line));
+  // TODO: implement this
+}
+
+void
+Environment::findInRange (const Point2d& position, double range,
+			  BuildingList& outBuildings)
+{
+  NS_LOG_FUNCTION (this << boost::geometry::wkt (position) << range);
+  genericFindInRange (m_buildings, position, range, outBuildings);
+  NS_LOG_LOGIC ("Found " << outBuildings.size () << " buildings within "
+		<< range << "m around " << boost::geometry::wkt (position));
+}
+
+void
+Environment::findInRange (const Point2d& position, double range,
+			  FoliageList& outFoliage)
+{
+  NS_LOG_FUNCTION (this << boost::geometry::wkt (position) << range);
+  genericFindInRange (m_foliage, position, range, outFoliage);
+  NS_LOG_LOGIC ("Found " << outFoliage.size () << " foliage objects within "
+		<< range << "m around " << boost::geometry::wkt (position));
+}
+
+
+void
+Environment::findInRange (const Point2d& position, double range,
+			  VehicleList& outVehicles)
+{
+  NS_LOG_FUNCTION (this << boost::geometry::wkt (position) << range);
+  // TODO: implement this
 }
 
 }  // namespace gemv2

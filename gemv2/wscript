@@ -21,6 +21,7 @@ def build(bld):
     module_test = bld.create_ns3_module_test_library('gemv2')
     module_test.source = [
         'test/gemv2-test-suite.cc',
+        'test/gemv2-environment-test-suite.cc',
         'test/gemv2-geometry-test-suite.cc',
         ]
 

@@ -24,6 +24,16 @@ namespace ns3 {
 namespace gemv2 {
 
 /*!
+ * @brief Basic types of communication links
+ */
+enum class LinkType
+{
+  LOS,  //!< Line of sight
+  NLOSv,//!< Obstructed by vehicles
+  NLOSb,//!< Obstructed by buildings or foliage
+};
+
+/*!
  * @brief Different models for links obstructed by vehicles.
  *
  * @note We cannot use a class enum here because it is not supported
@@ -54,6 +64,8 @@ enum NLOSbModelType
 
 /*!
  * @brief Antenna polarization direction
+ * @note We cannot use a class enum here because it is not supported
+ *       by the EnumValue provided with ns3.
  */
 enum AntennaPolarization
 {
