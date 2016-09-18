@@ -34,7 +34,7 @@ namespace {
  */
 template<typename TreeType, typename OutputType>
 void
-genericFindInRange (const TreeType& tree, const ns3::gemv2::Point2d& position,
+GenericFindInRange (const TreeType& tree, const ns3::gemv2::Point2d& position,
 		    double range, OutputType& result)
 {
   // make bounding box around circle
@@ -86,6 +86,17 @@ Environment::AddBuilding (Ptr<Building> building)
 }
 
 void
+Environment::AddBuildings (const BuildingList& buildings)
+{
+  for (auto const& b : buildings)
+    {
+      NS_ASSERT_MSG (b, "building must not be null");
+    }
+  m_buildings.insert (buildings.begin (), buildings.end ());
+}
+
+
+void
 Environment::AddFoliage (Ptr<Foliage> foliage)
 {
   NS_ASSERT_MSG (foliage, "foliage must not be null");
@@ -93,7 +104,7 @@ Environment::AddFoliage (Ptr<Foliage> foliage)
 }
 
 void
-Environment::intersect (const LineSegment2d& line, BuildingList& outBuildings)
+Environment::Intersect (const LineSegment2d& line, BuildingList& outBuildings)
 {
   NS_LOG_FUNCTION (this << boost::geometry::wkt (line));
 
@@ -106,7 +117,7 @@ Environment::intersect (const LineSegment2d& line, BuildingList& outBuildings)
 }
 
 void
-Environment::intersect (const LineSegment2d& line, FoliageList& outFoliage)
+Environment::Intersect (const LineSegment2d& line, FoliageList& outFoliage)
 {
   NS_LOG_FUNCTION (this << boost::geometry::wkt (line));
 
@@ -119,35 +130,35 @@ Environment::intersect (const LineSegment2d& line, FoliageList& outFoliage)
 }
 
 void
-Environment::intersect (const LineSegment2d& line, VehicleList& outVehicles)
+Environment::Intersect (const LineSegment2d& line, VehicleList& outVehicles)
 {
   NS_LOG_FUNCTION (this << boost::geometry::wkt (line));
   // TODO: implement this
 }
 
 void
-Environment::findInRange (const Point2d& position, double range,
+Environment::FindInRange (const Point2d& position, double range,
 			  BuildingList& outBuildings)
 {
   NS_LOG_FUNCTION (this << boost::geometry::wkt (position) << range);
-  genericFindInRange (m_buildings, position, range, outBuildings);
+  GenericFindInRange (m_buildings, position, range, outBuildings);
   NS_LOG_LOGIC ("Found " << outBuildings.size () << " buildings within "
 		<< range << "m around " << boost::geometry::wkt (position));
 }
 
 void
-Environment::findInRange (const Point2d& position, double range,
+Environment::FindInRange (const Point2d& position, double range,
 			  FoliageList& outFoliage)
 {
   NS_LOG_FUNCTION (this << boost::geometry::wkt (position) << range);
-  genericFindInRange (m_foliage, position, range, outFoliage);
+  GenericFindInRange (m_foliage, position, range, outFoliage);
   NS_LOG_LOGIC ("Found " << outFoliage.size () << " foliage objects within "
 		<< range << "m around " << boost::geometry::wkt (position));
 }
 
 
 void
-Environment::findInRange (const Point2d& position, double range,
+Environment::FindInRange (const Point2d& position, double range,
 			  VehicleList& outVehicles)
 {
   NS_LOG_FUNCTION (this << boost::geometry::wkt (position) << range);

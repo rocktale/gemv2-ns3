@@ -54,23 +54,23 @@ Gemv2BasicEnvironmentTestCase::DoRun (void)
   gemv2::LineSegment2d two ({0,0}, {100, 100});
 
   gemv2::Environment::BuildingList buildings;
-  env->intersect (none, buildings);
+  env->Intersect (none, buildings);
   NS_TEST_ASSERT_MSG_EQ (buildings.size (), 0, "Should not intersect");
   buildings.clear ();
 
-  env->intersect (one, buildings);
+  env->Intersect (one, buildings);
   NS_TEST_ASSERT_MSG_EQ (buildings.size (), 1, "Should intersect once");
   buildings.clear ();
 
-  env->intersect (two, buildings);
+  env->Intersect (two, buildings);
   NS_TEST_ASSERT_MSG_EQ (buildings.size (), 2, "Should intersect twice");
   buildings.clear ();
 
-  env->findInRange (gemv2::Point2d (0, 0), 20, buildings);
+  env->FindInRange (gemv2::Point2d (0, 0), 20, buildings);
   NS_TEST_ASSERT_MSG_EQ (buildings.size (), 1, "Should find one building");
   buildings.clear ();
 
-  env->findInRange (gemv2::Point2d (25, 25), 20, buildings);
+  env->FindInRange (gemv2::Point2d (25, 25), 20, buildings);
   NS_TEST_ASSERT_MSG_EQ (buildings.size (), 3, "Should find three buildings");
   buildings.clear ();
 }

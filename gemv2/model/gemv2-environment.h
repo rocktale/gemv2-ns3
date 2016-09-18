@@ -91,6 +91,13 @@ public:
   AddBuilding (Ptr<Building> building);
 
   /*!
+   * @brief Add buildings to the environment.
+   * @param buildings	Buildings to add, must not be null
+   */
+  void
+  AddBuildings (const BuildingList& buildings);
+
+  /*!
    * @brief Add a foliage object to the environment.
    * @param foliage	Foliage to add, must not be null
    */
@@ -104,7 +111,7 @@ public:
    * @param outBuildings 	Buildings intersecting with @a line
    */
   void
-  intersect (const LineSegment2d& line, BuildingList& outBuildings);
+  Intersect (const LineSegment2d& line, BuildingList& outBuildings);
 
   /*!
    * @brief Calculate intersection of a line segment with foliage objects.
@@ -112,7 +119,7 @@ public:
    * @param outFoliage	 	Foliage objects intersecting with @a line
    */
   void
-  intersect (const LineSegment2d& line, FoliageList& outFoliage);
+  Intersect (const LineSegment2d& line, FoliageList& outFoliage);
 
   /*!
    * @brief Calculate intersection of a line segment with vehicles.
@@ -120,7 +127,7 @@ public:
    * @param outVehicles	 	Vehicles intersecting with @a line
    */
   void
-  intersect (const LineSegment2d& line, VehicleList& outVehicles);
+  Intersect (const LineSegment2d& line, VehicleList& outVehicles);
 
   /*!
    * @brief Find all buildings with distance less then @a range to @a position.
@@ -129,7 +136,7 @@ public:
    * @param outBuildings   Buildings within @a range around @a position
    */
   void
-  findInRange (const Point2d& position, double range,
+  FindInRange (const Point2d& position, double range,
 	       BuildingList& outBuildings);
 
   /*!
@@ -139,7 +146,7 @@ public:
    * @param outFoliage     Foliage objects within @a range around @a position
    */
   void
-  findInRange (const Point2d& position, double range,
+  FindInRange (const Point2d& position, double range,
 	       FoliageList& outFoliage);
 
   /*!
@@ -149,7 +156,7 @@ public:
    * @param outVehicles	   Vehicles within @a range around @a position
    */
   void
-  findInRange (const Point2d& position, double range,
+  FindInRange (const Point2d& position, double range,
 	       VehicleList& outVehicles);
 
 private:
