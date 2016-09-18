@@ -52,6 +52,15 @@ enum NLOSbModelType
   NLOSB_MODEL_REFLECTION_DIFFRACTION
 };
 
+/*!
+ * @brief Antenna polarization direction
+ */
+enum AntennaPolarization
+{
+  ANTENNA_POLARIZATION_VERTICAL = 0, //!< vertical polarization
+  ANTENNA_POLARIZATION_HORIZONTAL    //!< horizontal polarization
+};
+
 //! A tuple consisting of a min/med/max value.
 typedef std::tuple<double, double, double> MinMedMaxDoubleValue;
 

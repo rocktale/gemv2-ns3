@@ -15,41 +15,31 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-#ifndef GEMV2_ENVIRONMENT_H
-#define GEMV2_ENVIRONMENT_H
+#include "gemv2-environment.h"
 
-#include <ns3/ptr.h>
-#include <ns3/simple-ref-count.h>
+#include <ns3/log.h>
 
 namespace ns3 {
+
+NS_LOG_COMPONENT_DEFINE("Gemv2Environment");
+
 namespace gemv2 {
 
-/*!
- * @brief Class to manage the GEMV^2 environment.
- *
- * This will bundle all actors (vehicles, RSUs) and objects
- * (buildings, foliage) in one place.
- */
-class Environment : public SimpleRefCount<Environment>
+Environment::Environment()
 {
-public:
-  /*!
-   * @brief Create empty environment.
-   */
-  Environment();
+}
 
-  /*!
-   * @brief Get global instance of the environment.
-   * @return Global instance of the environment
-   */
-  static Ptr<Environment>
-  GetGlobal ();
+Ptr<Environment>
+Environment::GetGlobal ()
+{
+  static Ptr<Environment> e;
+  if (!e)
+    {
+      e = Create<Environment> ();
+    }
 
-private:
-
-};
+  return e;
+}
 
 }  // namespace gemv2
 }  // namespace ns3
-
-#endif /* GEMV2_ENVIRONMENT_H */

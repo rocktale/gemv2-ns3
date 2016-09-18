@@ -21,16 +21,27 @@
 
 #include <ns3/assert.h>
 #include <ns3/log.h>
-
 #include <ns3/double.h>
 #include <ns3/enum.h>
 
-// Default value constants are in local scope only
+#include "gemv2-environment.h"
+
+/*
+ * Definition of default values used in the attributes and the default
+ * constructor. Most of them are directly based on the matlab implementation
+ * of GEMV^2.
+ *
+ * We put them in local scope to limit access to the current module.
+ */
 namespace
 {
 
 // Frequency - default is 5.9 GHz
 constexpr double DEFAULT_FREQUENCY = 5.9e9;
+
+// Antenna polarization
+constexpr ns3::gemv2::AntennaPolarization DEFAULT_ANTENNA_POLARIZATION =
+    ns3::gemv2::ANTENNA_POLARIZATION_VERTICAL;
 
 // Communication ranges
 constexpr double DEFAULT_MAX_LOS_COMM_RANGE = 1000.0;
@@ -48,12 +59,12 @@ constexpr ns3::gemv2::MinMedMaxDoubleValue
 // Model for NLOSb links
 constexpr ns3::gemv2::NLOSbModelType DEFAULT_NLOSB_MODEL =
     ns3::gemv2::NLOSB_MODEL_LOG_DISTANCE;
-
-// Material parameters for reflections
-constexpr double DEFAULT_PERMITTIVITY_BUILDINGS = 4.5;  // concrete
-constexpr double DEFAULT_PERMITTIVITY_VEHICLES = 6.0; 	// mix of metal, glass, ...
-
 }  // namespace
+
+
+/*
+ * And now the implementation of the propagation loss model.
+ */
 
 namespace ns3 {
 
@@ -72,6 +83,13 @@ Gemv2PropagationLossModel::GetTypeId (void)
                      DoubleValue (DEFAULT_FREQUENCY),
                      MakeDoubleAccessor (&Gemv2PropagationLossModel::m_frequency),
                      MakeDoubleChecker<double> ())
+      .AddAttribute ("AntennaPolarization",
+		     "Polarization of the antennas (vertical or horizontal)",
+		     EnumValue (DEFAULT_ANTENNA_POLARIZATION),
+		     MakeEnumAccessor (&Gemv2PropagationLossModel::m_antennaPolarization),
+		     MakeEnumChecker (
+			 gemv2::ANTENNA_POLARIZATION_VERTICAL, "vertical",
+			 gemv2::ANTENNA_POLARIZATION_HORIZONTAL, "horizontal"))
       .AddAttribute ("MaxLOSCommunicationRange",
 		     "Maximum LOS communication range [m].",
 		     DoubleValue (DEFAULT_MAX_LOS_COMM_RANGE),
@@ -102,30 +120,20 @@ Gemv2PropagationLossModel::GetTypeId (void)
 		     MakeEnumChecker (
 			 gemv2::NLOSB_MODEL_LOG_DISTANCE, "log-distance",
 			 gemv2::NLOSB_MODEL_REFLECTION_DIFFRACTION, "reflection-diffraction"))
-      .AddAttribute ("RelativePermittivityBuildings",
-		     "Relative permittivity for buildings.",
-		     DoubleValue (DEFAULT_PERMITTIVITY_BUILDINGS),
-		     MakeDoubleAccessor (&Gemv2PropagationLossModel::m_permittivityBuildings),
-		     MakeDoubleChecker<double> ())
-      .AddAttribute ("RelativePermittivityVehicles",
-		     "Relative permittivity of vehicles.",
-		     DoubleValue (DEFAULT_PERMITTIVITY_VEHICLES),
-		     MakeDoubleAccessor (&Gemv2PropagationLossModel::m_permittivityVehicles),
-		     MakeDoubleChecker<double> ())
        ;
   return tid;
 }
 
 Gemv2PropagationLossModel::Gemv2PropagationLossModel ()
-  : m_frequency (DEFAULT_FREQUENCY),
+  : m_environment (gemv2::Environment::GetGlobal ()),
+    m_frequency (DEFAULT_FREQUENCY),
+    m_antennaPolarization (DEFAULT_ANTENNA_POLARIZATION),
     m_maxLOSCommRange (DEFAULT_MAX_LOS_COMM_RANGE),
     m_maxNLOSvCommRange (DEFAULT_MAX_NLOSV_COMM_RANGE),
     m_maxNLOSbCommRange (DEFAULT_MAX_NLOSB_COMM_RANGE),
     m_modelNLOSv (DEFAULT_NLOSV_MODEL),
     m_lossPerVehicleNLOSvSimple (DEFAULT_LOSS_PER_VEHICLE_NLOSV_SIMPLE),
-    m_modelNLOSb (DEFAULT_NLOSB_MODEL),
-    m_permittivityBuildings (DEFAULT_PERMITTIVITY_BUILDINGS),
-    m_permittivityVehicles (DEFAULT_PERMITTIVITY_VEHICLES)
+    m_modelNLOSb (DEFAULT_NLOSB_MODEL)
 {
   NS_LOG_FUNCTION (this);
 }
@@ -134,6 +142,14 @@ Gemv2PropagationLossModel::~Gemv2PropagationLossModel ()
 {
   NS_LOG_FUNCTION (this);
 }
+
+void
+Gemv2PropagationLossModel::SetEnviroment (Ptr<gemv2::Environment> environment)
+{
+  NS_LOG_FUNCTION (this);
+  m_environment = environment;
+}
+
 
 /*
  * PropagationLossModel methods

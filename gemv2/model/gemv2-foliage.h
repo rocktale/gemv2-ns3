@@ -15,41 +15,50 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-#ifndef GEMV2_ENVIRONMENT_H
-#define GEMV2_ENVIRONMENT_H
+#ifndef GEMV2_FOLIAGE_H
+#define GEMV2_FOLIAGE_H
 
-#include <ns3/ptr.h>
 #include <ns3/simple-ref-count.h>
+#include <ns3/gemv2-geometry.h>
 
 namespace ns3 {
 namespace gemv2 {
 
 /*!
- * @brief Class to manage the GEMV^2 environment.
- *
- * This will bundle all actors (vehicles, RSUs) and objects
- * (buildings, foliage) in one place.
+ * @brief A single foliage (tree, bush, ...) within the GEMV^2 environment.
  */
-class Environment : public SimpleRefCount<Environment>
+class Foliage : public SimpleRefCount<Foliage>
 {
 public:
   /*!
-   * @brief Create empty environment.
+   * @brief Create foliage from the provided shape.
    */
-  Environment();
+  explicit Foliage (Polygon2d const& shape);
 
   /*!
-   * @brief Get global instance of the environment.
-   * @return Global instance of the environment
+   * @brief Get the shape of the foliage
+   * @return Shape of the foliage
    */
-  static Ptr<Environment>
-  GetGlobal ();
+  Polygon2d const&
+  GetShape () const;
+
+  /*!
+   * @brief Get the bounding box of the foliage
+   * @return Bounding box of the foliage
+   */
+  Box2d const&
+  GetBoundingBox () const;
 
 private:
 
+  //! Shape of the foliage
+  Polygon2d m_shape;
+
+  //! Bounding box of the foliage
+  Box2d m_boundingBox;
 };
 
 }  // namespace gemv2
 }  // namespace ns3
 
-#endif /* GEMV2_ENVIRONMENT_H */
+#endif /* GEMV2_FOLIAGE_H */

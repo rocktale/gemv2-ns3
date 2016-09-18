@@ -18,6 +18,7 @@
 #ifndef GEMV2_PROPAGATION_LOSS_MODEL_H
 #define GEMV2_PROPAGATION_LOSS_MODEL_H
 
+#include <ns3/ptr.h>
 #include <ns3/propagation-loss-model.h>
 
 #include "gemv2-types.h"
@@ -25,6 +26,22 @@
 
 namespace ns3 {
 
+// forward declarations
+namespace gemv2 {
+
+class Environment;
+
+}  // namespace gemv2
+
+/*!
+ * @brief Propagation loss model based on GEMV^2.
+ *
+ * This is the main class for the propagation loss model. It provides
+ * most of the parameters available for GEMV^2 and calculates the channel
+ * loss for a link.
+ *
+ * More information can be found here: vehicle2x.net
+ */
 class Gemv2PropagationLossModel : public PropagationLossModel
 {
 public:
@@ -38,6 +55,9 @@ public:
 
   /*!
    * @brief Default constructor.
+   *
+   * Initializes all parameters with the default values and set
+   * the used environment to the global instance.
    */
   Gemv2PropagationLossModel ();
 
@@ -46,10 +66,17 @@ public:
    */
   ~Gemv2PropagationLossModel ();
 
+  /*!
+   * @brief Set a custom environment instance to use.
+   * @param environment		Environment used for calculations
+   */
+  void
+  SetEnviroment (Ptr<gemv2::Environment> environment);
+
 private:
 
   /*
-   * Disable copy construction and assigment to avoid misuse.
+   * Disable copy construction and assignment to avoid misuse.
    */
   Gemv2PropagationLossModel (const Gemv2PropagationLossModel&) = delete;
   void operator= (const Gemv2PropagationLossModel &) = delete;
@@ -67,11 +94,21 @@ private:
 
 
   /*
+   * Internal data
+   */
+
+  //! Pointer to the environment description
+  Ptr<gemv2::Environment> m_environment;
+
+  /*
    * Parameters of the model
    */
 
   //! Frequency of the signal
   double m_frequency;
+
+  //! Polarization of the antennas
+  gemv2::AntennaPolarization m_antennaPolarization;
 
   // Communication ranges
 
@@ -95,14 +132,6 @@ private:
 
   //! Model for NLOSb links
   gemv2::NLOSbModelType m_modelNLOSb;
-
-  // Reflection parameters
-
-  //! Relative permittivity of buildings
-  double m_permittivityBuildings;
-
-  //! Relative permittivity of vehicles (approximation)
-  double m_permittivityVehicles;
 };
 
 }  // namespace ns3

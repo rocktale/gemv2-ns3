@@ -15,41 +15,40 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-#ifndef GEMV2_ENVIRONMENT_H
-#define GEMV2_ENVIRONMENT_H
+#include "gemv2-foliage.h"
 
-#include <ns3/ptr.h>
-#include <ns3/simple-ref-count.h>
+#include <ns3/log.h>
+#include <boost/geometry/io/wkt/wkt.hpp>
 
 namespace ns3 {
+
+NS_LOG_COMPONENT_DEFINE("Gemv2Foliage");
+
 namespace gemv2 {
 
-/*!
- * @brief Class to manage the GEMV^2 environment.
- *
- * This will bundle all actors (vehicles, RSUs) and objects
- * (buildings, foliage) in one place.
- */
-class Environment : public SimpleRefCount<Environment>
+Foliage::Foliage (Polygon2d const& shape)
+  : m_shape (shape)
 {
-public:
-  /*!
-   * @brief Create empty environment.
-   */
-  Environment();
+  // fix potential issues with shape
+  boost::geometry::correct (m_shape);
+  NS_LOG_LOGIC ("Created foliage with outline: " << boost::geometry::wkt (m_shape));
 
-  /*!
-   * @brief Get global instance of the environment.
-   * @return Global instance of the environment
-   */
-  static Ptr<Environment>
-  GetGlobal ();
+  // calculate bounding box
+  boost::geometry::envelope (m_shape, m_boundingBox);
+  NS_LOG_LOGIC ("Foliage bounding box: " << boost::geometry::wkt (m_boundingBox));
+}
 
-private:
+Polygon2d const&
+Foliage::GetShape () const
+{
+  return m_shape;
+}
 
-};
+Box2d const&
+Foliage::GetBoundingBox () const
+{
+  return m_boundingBox;
+}
 
 }  // namespace gemv2
 }  // namespace ns3
-
-#endif /* GEMV2_ENVIRONMENT_H */
