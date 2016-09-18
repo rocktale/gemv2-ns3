@@ -23,6 +23,7 @@
 
 #include "gemv2-types.h"
 #include "gemv2-propagation-parameters.h"
+#include "gemv2-geometry.h"
 
 namespace ns3 {
 
@@ -81,9 +82,21 @@ private:
   Gemv2PropagationLossModel (const Gemv2PropagationLossModel&) = delete;
   void operator= (const Gemv2PropagationLossModel &) = delete;
 
+  /*!
+   * @brief Calculate the small scale variations for the link.
+   * @param a	First point
+   * @param b	Second point
+   * @return Small scale variations in dBm
+   */
+  double
+  CalculateSmallScaleVariations (
+      const gemv2::Point2d& a, const gemv2::Point2d& b) const;
+
+
   /*
    * PropagationLossModel methods
    */
+
 
   double
   DoCalcRxPower (double txPowerDbm, Ptr<MobilityModel> a,

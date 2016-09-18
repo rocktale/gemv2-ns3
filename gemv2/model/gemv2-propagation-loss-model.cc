@@ -24,6 +24,8 @@
 #include <ns3/double.h>
 #include <ns3/enum.h>
 
+#include <ns3/mobility-model.h>
+
 #include "gemv2-environment.h"
 
 /*
@@ -150,6 +152,14 @@ Gemv2PropagationLossModel::SetEnviroment (Ptr<gemv2::Environment> environment)
   m_environment = environment;
 }
 
+double
+Gemv2PropagationLossModel::CalculateSmallScaleVariations (
+    const gemv2::Point2d& a, const gemv2::Point2d& b) const
+{
+  // TODO: implement this
+  return 0;
+}
+
 
 /*
  * PropagationLossModel methods
@@ -161,9 +171,63 @@ Gemv2PropagationLossModel::DoCalcRxPower (double txPowerDbm,
 					  Ptr<MobilityModel> b) const
 {
   NS_LOG_FUNCTION (this << txPowerDbm);
+  NS_ASSERT (a);
+  NS_ASSERT (b);
 
-  // TODO: calculate real value
-  return -std::numeric_limits<double>::max ();
+  // Get positions
+  auto posA = a->GetPosition ();
+  auto posB = b->GetPosition ();
+
+  // Generate 2D points
+  gemv2::Point2d pointA = { posA.x, posA.y };
+  gemv2::Point2d pointB = { posB.x, posB.y };
+
+  // check maximum communication range
+  if (boost::geometry::distance (pointA, pointB) > m_maxLOSCommRange)
+    {
+      NS_LOG_LOGIC ("Nodes are out of range");
+
+      // TODO: check if we can model this better
+      return -std::numeric_limits<double>::max ();
+    }
+
+  // Make line segment between points
+  gemv2::LineSegment2d lineOfSight = {pointA, pointB};
+
+
+  gemv2::Environment::BuildingList buildingsInLos;
+  m_environment->Intersect (lineOfSight, buildingsInLos);
+
+  gemv2::Environment::FoliageList foliageInLos;
+  m_environment->Intersect (lineOfSight, foliageInLos);
+
+  double attenuationDbm = 0;
+
+  if (!buildingsInLos.empty () || !foliageInLos.empty ())
+    {
+      NS_LOG_LOGIC ("LOS intersects with buildings or foliage -> link type: NLOSb");
+    }
+  else
+    {
+      gemv2::Environment::VehicleList vehiclesInLos;
+      m_environment->Intersect (lineOfSight, vehiclesInLos);
+
+      // TODO: remove source and destination from result
+
+      if (!vehiclesInLos.empty ())
+	{
+	  NS_LOG_LOGIC ("LOS intersects with other vehicles -> link type: NLOSv");
+	}
+      else
+	{
+	  NS_LOG_LOGIC ("LOS is clear -> link type: LOS");
+	}
+    }
+
+  // add small scale variations
+  attenuationDbm += CalculateSmallScaleVariations (pointA, pointB);
+
+  return txPowerDbm - attenuationDbm;
 }
 
 int64_t
