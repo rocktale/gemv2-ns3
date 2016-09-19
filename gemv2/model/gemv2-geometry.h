@@ -55,6 +55,23 @@ typedef boost::geometry::strategy::transform::translate_transformer<
 typedef boost::geometry::strategy::transform::rotate_transformer<
     boost::geometry::degree, double, 2, 2> RotateDegree2d;
 
+
+/*
+ * Utility functions
+ */
+
+/*!
+ * @brief Make 2D point from vector.
+ * @param v	Vector to parse
+ * @return Point with x and y coordinates of @a v.
+ */
+template<typename VectorType>
+Point2d
+MakePoint2d (const VectorType& v)
+{
+  return Point2d (v.x, v.y);
+}
+
 }  // namespace gemv2
 }  // namespace ns3
 

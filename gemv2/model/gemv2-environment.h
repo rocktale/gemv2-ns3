@@ -67,6 +67,14 @@ public:
   //! List of vehicles
   typedef std::vector<Ptr<Vehicle>> VehicleList;
 
+  //! Collection of objects
+  struct ObjectCollection
+  {
+    BuildingList buildings;
+    FoliageList foliage;
+    VehicleList vehicles;
+  };
+
   /*
    * Class members
    */
@@ -104,6 +112,21 @@ public:
   void
   AddFoliage (Ptr<Foliage> foliage);
 
+  /*!
+   * @brief Test if line intersects with any buildings
+   * @param line 	Line to test
+   * @return True if line intersects at least with one building
+   */
+  bool
+  IntersectsBuildings (const LineSegment2d& line) const;
+
+  /*!
+   * @brief Test if line intersects with any foliage
+   * @param line 	Line to test
+   * @return True if line intersects at least with one foliage object
+   */
+  bool
+  IntersectsFoliage (const LineSegment2d& line) const;
 
   /*!
    * @brief Calculate intersection of a line segment with buildings.
@@ -130,34 +153,51 @@ public:
   Intersect (const LineSegment2d& line, VehicleList& outVehicles);
 
   /*!
-   * @brief Find all buildings with distance less then @a range to @a position.
-   * @param position	   Query position.
-   * @param range	   Maximum distance to the object
-   * @param outBuildings   Buildings within @a range around @a position
+   * @brief Find all buildings in ellipse.
+   * @param p1			First focal point of the ellipse
+   * @param p2			Second focal point of the ellipse
+   * @param range		Length of the major diameter
+   * @param outBuildings	Buildings where the sum of distance to @a p1 and
+   * 				@a p2 is less than @a range.
    */
   void
-  FindInRange (const Point2d& position, double range,
-	       BuildingList& outBuildings);
+  FindInEllipse (const Point2d& p1, const Point2d& p2, double range,
+		 BuildingList& outBuildings);
 
   /*!
-   * @brief Find all foliage with distance less then @a range to @a position.
-   * @param position	   Query position
-   * @param range	   Maximum distance to the object
-   * @param outFoliage     Foliage objects within @a range around @a position
+   * @brief Find all foliage in ellipse.
+   * @param p1			First focal point of the ellipse
+   * @param p2			Second focal point of the ellipse
+   * @param range		Length of the major diameter
+   * @param outFoliage		Foliage where the sum of distance to @a p1 and
+   * 				@a p2 is less than @a range.
    */
   void
-  FindInRange (const Point2d& position, double range,
-	       FoliageList& outFoliage);
+  FindInEllipse (const Point2d& p1, const Point2d& p2, double range,
+		 FoliageList& outFoliage);
 
   /*!
-   * @brief Find all vehicles with distance less then @a range to @a position.
-   * @param position	   Query position
-   * @param range	   Maximum distance to the object
-   * @param outVehicles	   Vehicles within @a range around @a position
+   * @brief Find all vehicles in ellipse.
+   * @param p1			First focal point of the ellipse
+   * @param p2			Second focal point of the ellipse
+   * @param range		Length of the major diameter
+   * @param outVehicles 	Vehicles where the sum of distance to @a p1 and
+   * 				@a p2 is less than @a range.
    */
   void
-  FindInRange (const Point2d& position, double range,
-	       VehicleList& outVehicles);
+  FindInEllipse (const Point2d& p1, const Point2d& p2, double range,
+		 VehicleList& outVehicles);
+
+  /*!
+   * @brief Find all objects in ellipse.
+   * @param p1			First focal point
+   * @param p2			Second focal point
+   * @param range		Maximum combined distance to @a p1 and @a p2
+   * @param outObjects		Found objects in ellipse are added here
+   */
+  void
+  FindAllInEllipse (const Point2d& p1, const Point2d& p2, double range,
+		    ObjectCollection& outObjects);
 
 private:
 

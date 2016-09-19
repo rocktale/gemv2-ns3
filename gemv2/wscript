@@ -10,6 +10,7 @@ def configure(conf):
 def build(bld):
     module = bld.create_ns3_module('gemv2', ['core', 'propagation'])
     module.source = [
+        'model/gemv2-bounding-boxes.cc',
         'model/gemv2-building.cc',
         'model/gemv2-environment.cc',
         'model/gemv2-foliage.cc',
@@ -28,12 +29,14 @@ def build(bld):
     headers = bld(features='ns3header')
     headers.module = 'gemv2'
     headers.source = [
+        'model/gemv2-bounding-boxes.h',
         'model/gemv2-building.h',
         'model/gemv2-environment.h',
         'model/gemv2-foliage.h',
         'model/gemv2-geometry.h',
         'model/gemv2-propagation-loss-model.h',
         'model/gemv2-propagation-parameters.h',
+        'model/gemv2-rtree-queries.h',
         'model/gemv2-types.h',
         'model/gemv2-vehicle.h',
         'helper/gemv2-helper.h',

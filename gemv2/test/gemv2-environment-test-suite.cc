@@ -65,14 +65,6 @@ Gemv2BasicEnvironmentTestCase::DoRun (void)
   env->Intersect (two, buildings);
   NS_TEST_ASSERT_MSG_EQ (buildings.size (), 2, "Should intersect twice");
   buildings.clear ();
-
-  env->FindInRange (gemv2::Point2d (0, 0), 20, buildings);
-  NS_TEST_ASSERT_MSG_EQ (buildings.size (), 1, "Should find one building");
-  buildings.clear ();
-
-  env->FindInRange (gemv2::Point2d (25, 25), 20, buildings);
-  NS_TEST_ASSERT_MSG_EQ (buildings.size (), 3, "Should find three buildings");
-  buildings.clear ();
 }
 
 

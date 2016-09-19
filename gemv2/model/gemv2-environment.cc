@@ -17,44 +17,12 @@
  */
 #include "gemv2-environment.h"
 
+#include <algorithm>
 #include <boost/geometry/io/wkt/wkt.hpp>
 
 #include <ns3/log.h>
 #include <ns3/assert.h>
-
-
-namespace {
-
-/*!
- * @brief Generic find in range for various tree types.
- * @param tree		Tree to query
- * @param position	Position to query for
- * @param range		Maximum distance from @a position
- * @param result	Found objects
- */
-template<typename TreeType, typename OutputType>
-void
-GenericFindInRange (const TreeType& tree, const ns3::gemv2::Point2d& position,
-		    double range, OutputType& result)
-{
-  // make bounding box around circle
-  ns3::gemv2::Box2d bBox =
-      {{position.x () - range/2, position.y () - range/2},
-       {position.x () + range/2, position.y () + range/2}};
-
-  // query the tree with bounding box and range condition
-  tree.query (
-      boost::geometry::index::intersects (bBox) &&
-      boost::geometry::index::satisfies (
-	  [range, position](const typename TreeType::value_type& v)
-	  {
-	    return boost::geometry::distance (position, v->GetShape ()) <= range;
-	  }),
-
-	  std::back_inserter (result));
-}
-
-}
+#include <ns3/gemv2-rtree-queries.h>
 
 namespace ns3 {
 
@@ -103,6 +71,21 @@ Environment::AddFoliage (Ptr<Foliage> foliage)
   m_foliage.insert (foliage);
 }
 
+bool
+Environment::IntersectsBuildings (const LineSegment2d& line) const
+{
+  NS_LOG_FUNCTION (this << boost::geometry::wkt (line));
+  return IntersectsAny (m_buildings, line);
+}
+
+bool
+Environment::IntersectsFoliage (const LineSegment2d& line) const
+{
+  NS_LOG_FUNCTION (this << boost::geometry::wkt (line));
+  return IntersectsAny (m_foliage, line);
+}
+
+
 void
 Environment::Intersect (const LineSegment2d& line, BuildingList& outBuildings)
 {
@@ -133,36 +116,71 @@ void
 Environment::Intersect (const LineSegment2d& line, VehicleList& outVehicles)
 {
   NS_LOG_FUNCTION (this << boost::geometry::wkt (line));
+
   // TODO: implement this
+  NS_LOG_WARN ("Not implemented (yet)");
 }
 
 void
-Environment::FindInRange (const Point2d& position, double range,
-			  BuildingList& outBuildings)
+Environment::FindInEllipse (const Point2d& p1, const Point2d& p2, double range,
+			    BuildingList& outBuildings)
 {
-  NS_LOG_FUNCTION (this << boost::geometry::wkt (position) << range);
-  GenericFindInRange (m_buildings, position, range, outBuildings);
-  NS_LOG_LOGIC ("Found " << outBuildings.size () << " buildings within "
-		<< range << "m around " << boost::geometry::wkt (position));
+  NS_LOG_FUNCTION (
+      this << boost::geometry::wkt (p1) << boost::geometry::wkt (p2) << range);
+
+  FindObjectsInEllipse (m_buildings, p1, p2, range, outBuildings);
+
+  NS_LOG_LOGIC ("Found " << outBuildings.size () << " buildings in ellipse r="
+		<< range << "m around " << boost::geometry::wkt (p1)
+		<< " and " << boost::geometry::wkt (p2));
 }
 
 void
-Environment::FindInRange (const Point2d& position, double range,
-			  FoliageList& outFoliage)
+Environment::FindInEllipse (const Point2d& p1, const Point2d& p2, double range,
+		 FoliageList& outFoliage)
 {
-  NS_LOG_FUNCTION (this << boost::geometry::wkt (position) << range);
-  GenericFindInRange (m_foliage, position, range, outFoliage);
-  NS_LOG_LOGIC ("Found " << outFoliage.size () << " foliage objects within "
-		<< range << "m around " << boost::geometry::wkt (position));
+  NS_LOG_FUNCTION (
+      this << boost::geometry::wkt (p1) << boost::geometry::wkt (p2) << range);
+
+  FindObjectsInEllipse (m_foliage, p1, p2, range, outFoliage);
+
+  NS_LOG_LOGIC ("Found " << outFoliage.size () << " foliage objects in ellipse r="
+		<< range << "m around " << boost::geometry::wkt (p1)
+		<< " and " << boost::geometry::wkt (p2));
 }
 
 
 void
-Environment::FindInRange (const Point2d& position, double range,
-			  VehicleList& outVehicles)
+Environment::FindInEllipse (const Point2d& p1, const Point2d& p2, double range,
+		 VehicleList& outVehicles)
 {
-  NS_LOG_FUNCTION (this << boost::geometry::wkt (position) << range);
+  NS_LOG_FUNCTION (
+      this << boost::geometry::wkt (p1) << boost::geometry::wkt (p2) << range);
+
   // TODO: implement this
+  NS_LOG_WARN ("Not implemented (yet)");
+}
+
+void
+Environment::FindAllInEllipse (const Point2d& p1, const Point2d& p2, double range,
+			       ObjectCollection& outObjects)
+{
+  NS_LOG_FUNCTION (
+      this << boost::geometry::wkt (p1) << boost::geometry::wkt (p2) << range);
+
+  // Calculate bounding box around ellipse
+  auto bBox = MakeBoundingBoxEllipse (p1, p2, range);
+
+  NS_LOG_LOGIC ("Bounding box: " << boost::geometry::wkt (bBox));
+
+  // collect buildings
+  FindObjectsInEllipse (m_buildings, bBox, p1, p2, range, outObjects.buildings);
+
+  // collect foliage
+  FindObjectsInEllipse (m_foliage, bBox, p1, p2, range, outObjects.foliage);
+
+  // TODO: collect vehicles
+
 }
 
 }  // namespace gemv2

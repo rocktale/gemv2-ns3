@@ -28,9 +28,11 @@ namespace gemv2 {
  */
 enum class LinkType
 {
-  LOS,  //!< Line of sight
-  NLOSv,//!< Obstructed by vehicles
-  NLOSb,//!< Obstructed by buildings or foliage
+  LOS,   //!< Line of sight
+  NLOSv, //!< Obstructed by vehicles
+  NLOSb, //!< Obstructed by buildings
+  NLOSf, //!< Obstructed by foliage
+  UNKNOWN //!< Link type unknown or undetermined
 };
 
 /*!

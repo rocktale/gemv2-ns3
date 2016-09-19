@@ -93,6 +93,18 @@ private:
       const gemv2::Point2d& a, const gemv2::Point2d& b) const;
 
 
+  /*!
+   * @brief Calculate some noise for out of range links
+   * @param txPower	Transmit power [dBm]
+   * @param distance	Distance between sender and receiver [m]
+   * @param linkType 	Type of the link
+   * @return Power at receiver [dBm]
+   */
+  double
+  CalculateOutOfRangeNoise (double txPower,
+			    double distance,
+			    gemv2::LinkType linkType) const;
+
   /*
    * PropagationLossModel methods
    */

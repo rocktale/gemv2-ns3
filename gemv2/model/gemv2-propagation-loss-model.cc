@@ -160,6 +160,20 @@ Gemv2PropagationLossModel::CalculateSmallScaleVariations (
   return 0;
 }
 
+double
+Gemv2PropagationLossModel::CalculateOutOfRangeNoise (
+    double txPower, double distance, gemv2::LinkType linkType) const
+{
+  NS_LOG_FUNCTION (this << txPower << distance << static_cast<int> (linkType));
+  /*
+   * TODO: check if we can model this better
+   *
+   * It might be interesting to return some randomized noise based
+   * on the distance to model the long distance interference of multiple
+   * ongoing transmissions.
+   */
+  return -std::numeric_limits<double>::max ();
+}
 
 /*
  * PropagationLossModel methods
@@ -178,51 +192,102 @@ Gemv2PropagationLossModel::DoCalcRxPower (double txPowerDbm,
   auto posA = a->GetPosition ();
   auto posB = b->GetPosition ();
 
-  // Generate 2D points
-  gemv2::Point2d pointA = { posA.x, posA.y };
-  gemv2::Point2d pointB = { posB.x, posB.y };
+  double distance = CalculateDistance (posA, posB);
 
-  // check maximum communication range
-  if (boost::geometry::distance (pointA, pointB) > m_maxLOSCommRange)
+  if (distance > m_maxLOSCommRange)
     {
-      NS_LOG_LOGIC ("Nodes are out of range");
-
-      // TODO: check if we can model this better
-      return -std::numeric_limits<double>::max ();
+      NS_LOG_LOGIC ("Nodes are out of range.");
+      return CalculateOutOfRangeNoise (
+	  txPowerDbm, distance, gemv2::LinkType::UNKNOWN);
     }
 
+  // Generate 2D points
+  auto pointA = gemv2::MakePoint2d (posA);
+  auto pointB = gemv2::MakePoint2d (posB);
+
   // Make line segment between points
-  gemv2::LineSegment2d lineOfSight = {pointA, pointB};
+  gemv2::LineSegment2d lineOfSight (pointA, pointB);
 
-
-  gemv2::Environment::BuildingList buildingsInLos;
-  m_environment->Intersect (lineOfSight, buildingsInLos);
-
-  gemv2::Environment::FoliageList foliageInLos;
-  m_environment->Intersect (lineOfSight, foliageInLos);
-
+  // Lets start without attenuation
   double attenuationDbm = 0;
 
-  if (!buildingsInLos.empty () || !foliageInLos.empty ())
+  // communication range based on link type
+  double effectiveComRange = -1;
+  gemv2::LinkType linkType = gemv2::LinkType::UNKNOWN;
+
+  // vehicles in LOS - will only be filled for NLOSv links
+  gemv2::Environment::VehicleList vehiclesInLos;
+
+  // First we check for obstructing buildings
+  if (m_environment->IntersectsBuildings (lineOfSight))
     {
-      NS_LOG_LOGIC ("LOS intersects with buildings or foliage -> link type: NLOSb");
+      NS_LOG_LOGIC ("LOS intersects with buildings -> link type: NLOSb");
+      if (distance > m_maxNLOSbCommRange)
+	{
+	  NS_LOG_LOGIC ("NLOSb link out of range: " << distance);
+	  return CalculateOutOfRangeNoise (
+	      txPowerDbm, distance, gemv2::LinkType::NLOSb);
+	}
+
+      effectiveComRange = m_maxNLOSbCommRange;
+      linkType = gemv2::LinkType::NLOSb;
+    }
+  else if (m_environment->IntersectsFoliage (lineOfSight))
+    {
+      NS_LOG_LOGIC ("LOS intersects with foliage -> link type: NLOSf");
+      if (distance > m_maxNLOSbCommRange)
+	{
+	  NS_LOG_LOGIC ("NLOSf link out of range: " << distance);
+	  return CalculateOutOfRangeNoise (
+	      txPowerDbm, distance, gemv2::LinkType::NLOSf);
+	}
+
+      effectiveComRange = m_maxNLOSbCommRange;
+      linkType = gemv2::LinkType::NLOSf;
     }
   else
     {
-      gemv2::Environment::VehicleList vehiclesInLos;
+      // No buildings or foliage, check for obstructing vehicles
       m_environment->Intersect (lineOfSight, vehiclesInLos);
 
-      // TODO: remove source and destination from result
-
+      // TODO: remove source and destination from result,
+      //       otherwise, we will always intersect with vehicles
       if (!vehiclesInLos.empty ())
 	{
-	  NS_LOG_LOGIC ("LOS intersects with other vehicles -> link type: NLOSv");
+	  NS_LOG_LOGIC (""
+	      "LOS intersects with other vehicles -> link type: NLOSv");
+
+	  if (distance > m_maxNLOSvCommRange)
+	    {
+	      NS_LOG_LOGIC ("NLOSv link out of range: " << distance);
+	      return CalculateOutOfRangeNoise (
+		  txPowerDbm, distance, gemv2::LinkType::NLOSv);
+	    }
+
+	  effectiveComRange = m_maxNLOSvCommRange;
+	  linkType = gemv2::LinkType::NLOSv;
 	}
       else
 	{
 	  NS_LOG_LOGIC ("LOS is clear -> link type: LOS");
+
+	  effectiveComRange = m_maxLOSCommRange;
+	  linkType = gemv2::LinkType::LOS;
 	}
     }
+
+  NS_ASSERT_MSG (effectiveComRange > 0,
+		 "Effective communication range must be larger than 0");
+
+  // Find all objects in joint communication ellipse
+  gemv2::Environment::ObjectCollection jointObjects;
+  m_environment->FindAllInEllipse (
+      pointA, pointB, effectiveComRange, jointObjects);
+
+  // TODO: remove source/destination vehicles from object set
+
+  // TODO: calculate large scale variations based on link type
+  (void) linkType;
 
   // add small scale variations
   attenuationDbm += CalculateSmallScaleVariations (pointA, pointB);
