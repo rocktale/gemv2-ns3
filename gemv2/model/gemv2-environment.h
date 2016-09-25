@@ -32,10 +32,9 @@
 #include <iostream>
 #include <vector>
 
-#include <boost/geometry/index/rtree.hpp>
-
 #include <ns3/ptr.h>
 #include <ns3/simple-ref-count.h>
+#include <ns3/nstime.h>
 
 #include <ns3/gemv2-building.h>
 #include <ns3/gemv2-foliage.h>
@@ -55,17 +54,21 @@ class Environment : public SimpleRefCount<Environment>
 public:
 
   /*
-   * Some typedefs
+   * Some alias definitions
    */
 
+  //! Generic list of objects stored using ns-3 pointers
+  template<typename T>
+  using PointerList = std::vector<Ptr<T>>;
+
   //! List of buildings
-  typedef std::vector<Ptr<Building>> BuildingList;
+  using BuildingList = PointerList<Building>;
 
   //! List of foliage objects
-  typedef std::vector<Ptr<Foliage>> FoliageList;
+  using FoliageList = PointerList<Foliage>;
 
   //! List of vehicles
-  typedef std::vector<Ptr<Vehicle>> VehicleList;
+  using VehicleList = PointerList<Vehicle>;
 
   //! Collection of objects
   struct ObjectCollection
@@ -84,12 +87,23 @@ public:
    */
   Environment();
 
+  //! Destructor
+  ~Environment();
+
   /*!
    * @brief Get global instance of the environment.
    * @return Global instance of the environment
    */
   static Ptr<Environment>
   GetGlobal ();
+
+
+  /*!
+   * @brief Set the rebuild interval for the vehicle tree.
+   * @param t	Time after which the tree needs to be rebuild
+   */
+  void
+  SetVehicleTreeRebuildInterval (Time t);
 
   /*!
    * @brief Add a building to the environment.
@@ -111,6 +125,20 @@ public:
    */
   void
   AddFoliage (Ptr<Foliage> foliage);
+
+  /*!
+   * @brief Add a vehicle to the environment.
+   * @param vehicle	Vehicle to add, must not be null
+   */
+  void
+  AddVehicle (Ptr<Vehicle> vehicle);
+
+  /*!
+   * @brief Remove vehicle from environment.
+   * @param vehicle	Vehicle to remove, must not be null
+   */
+  void
+  RemoveVehicle (Ptr<Vehicle> vehicle);
 
   /*!
    * @brief Test if line intersects with any buildings
@@ -199,51 +227,25 @@ public:
   FindAllInEllipse (const Point2d& p1, const Point2d& p2, double range,
 		    ObjectCollection& outObjects);
 
+  //! Internal data structures moved to the implementation file.
+  struct Data;
+
 private:
 
-  /*
-   * Internal data stuctures
-   */
-
-  // small indexer for the trees to allow using pointers directly
-  template <typename T>
-  struct PtrIndex
-  {
-      typedef ns3::Ptr<T> V;
-      typedef ns3::gemv2::Box2d const& result_type;
-      result_type operator()(V const& v) const { return v->GetBoundingBox (); }
-  };
-
   /*!
-   * @brief Type of a range tree for buildings
-   *
-   * The tree will only be build on startup. Thus, we use the more
-   * expensive r-star algorithm here since it provides better performance
-   * for queries.
+   * @brief Check the status of the vehicle tree and rebuild if necessary.
    */
-  typedef boost::geometry::index::rtree<
-      Ptr<Building>, boost::geometry::index::quadratic<16>, PtrIndex<Building>
-  > BuildingTree;
+  void
+  CheckVehcileTree ();
 
-  //! The range tree containing all buildings
-  BuildingTree m_buildings;
+  // The environmental data
+  std::unique_ptr<Data> m_data;
 
-  /*!
-   * @brief Type of a range tree for foliage
-   *
-   * The tree will only be build on startup. Thus, we use the more
-   * expensive r-star algorithm here since it provides better performance
-   * for queries.
-   */
-  typedef boost::geometry::index::rtree<
-      Ptr<Foliage>, boost::geometry::index::quadratic<16>, PtrIndex<Foliage>
-  > FoliageTree;
+  //! Time of the last vehicle tree rebuild
+  Time m_lastVehicleTreeRebuild;
 
-  //! The range tree containing all foliage objects
-  FoliageTree m_foliage;
-
-  //! List of all vehicles
-  std::vector<Ptr<Vehicle>> m_vehicles;
+  //! Interval for vehicle tree rebuilds
+  Time m_vehicleTreeRebuildInterval;
 };
 
 }  // namespace gemv2

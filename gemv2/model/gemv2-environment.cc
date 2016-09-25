@@ -18,10 +18,15 @@
 #include "gemv2-environment.h"
 
 #include <algorithm>
+
+#include <boost/geometry/index/rtree.hpp>
 #include <boost/geometry/io/wkt/wkt.hpp>
+#include <boost/function_output_iterator.hpp>
 
 #include <ns3/log.h>
 #include <ns3/assert.h>
+#include <ns3/simulator.h>
+
 #include <ns3/gemv2-rtree-queries.h>
 
 namespace ns3 {
@@ -30,9 +35,131 @@ NS_LOG_COMPONENT_DEFINE("Gemv2Environment");
 
 namespace gemv2 {
 
+/*
+ * Tree definitions and data structures.
+ */
+struct Environment::Data
+{
+  // small indexer for the trees to allow using pointers directly
+  template <typename T>
+  struct PtrIndex
+  {
+    using V = ns3::Ptr<T>;
+    using result_type = ns3::gemv2::Box2d const&;	// required for rtree
+    result_type operator()(V const& v) const { return v->GetBoundingBox (); }
+  };
+
+  /*!
+   * @brief Adapter to access the shape directly on the provided tree object.
+   *
+   * This uses ptr->GetShape () to access the shape of the object.
+   */
+  template<typename TreeType>
+  struct DirectShapeAdapter
+  {
+    auto
+    operator() (const typename TreeType::value_type& v) -> decltype (v->GetShape ())
+    {
+      return v->GetShape ();
+    }
+  };
+
+  /*!
+   * @brief Type of a range tree for buildings
+   *
+   * The tree will only be build on startup. Thus, we use the more
+   * expensive r-star algorithm here since it provides better performance
+   * for queries.
+   */
+  using BuildingTree =
+      boost::geometry::index::rtree<
+      Ptr<Building>, boost::geometry::index::rstar<16>, PtrIndex<Building>>;
+
+  //! The range tree containing all buildings
+  BuildingTree buildings;
+
+  /*!
+   * @brief Type of a range tree for foliage
+   *
+   * The tree will only be build on startup. Thus, we use the more
+   * expensive r-star algorithm here since it provides better performance
+   * for queries.
+   */
+  using FoliageTree =
+      boost::geometry::index::rtree<
+      Ptr<Foliage>, boost::geometry::index::rstar<16>, PtrIndex<Foliage>>;
+
+  //! The range tree containing all foliage objects
+  FoliageTree foliage;
+
+  //! Set of all registered vehicles
+  std::set<Ptr<Vehicle>> vehicles;
+
+  //! Vehicle and a bounding box
+  using BoxedVehicle = std::pair<Box2d, Ptr<Vehicle>>;
+
+  //! Type of the tree for vehicle search
+  using VehicleTree =
+      boost::geometry::index::rtree<
+      BoxedVehicle, boost::geometry::index::quadratic<16>>;
+
+  //! Shape adapter for vehicles
+  struct VehicleShapeAdapter
+  {
+    auto
+    operator() (const VehicleTree::value_type& v)
+      -> decltype (v.second->GetShape ())
+    {
+      return v.second->GetShape ();
+    }
+  };
+
+  //! Current tree of assigned vehicles
+  VehicleTree vehicleTree;
+};
+
+/*
+ * Adapter definitions for tree queries
+ */
+namespace detail
+{
+
+template<>
+struct ShapeAdapterTrait<Environment::Data::BuildingTree>
+{
+  using AdapterType =
+      Environment::Data::DirectShapeAdapter<Environment::Data::BuildingTree>;
+};
+
+template<>
+struct ShapeAdapterTrait<Environment::Data::FoliageTree>
+{
+  using AdapterType =
+      Environment::Data::DirectShapeAdapter<Environment::Data::FoliageTree>;
+};
+
+template<>
+struct ShapeAdapterTrait<Environment::Data::VehicleTree>
+{
+  using AdapterType = Environment::Data::VehicleShapeAdapter;
+};
+
+}  // namespace detail
+
+
+/*
+ * And now the actual Environment implementation
+ */
+
 Environment::Environment()
+  : m_data (new Data),
+    m_lastVehicleTreeRebuild (-1.0),
+    m_vehicleTreeRebuildInterval (Seconds (1.0))
 {
 }
+
+// Should be created here to have the deleter of the data object
+Environment::~Environment() = default;
 
 Ptr<Environment>
 Environment::GetGlobal ()
@@ -47,10 +174,16 @@ Environment::GetGlobal ()
 }
 
 void
+Environment::SetVehicleTreeRebuildInterval (Time t)
+{
+  m_vehicleTreeRebuildInterval = t;
+}
+
+void
 Environment::AddBuilding (Ptr<Building> building)
 {
   NS_ASSERT_MSG (building, "building must not be null");
-  m_buildings.insert (building);
+  m_data->buildings.insert (building);
 }
 
 void
@@ -60,7 +193,7 @@ Environment::AddBuildings (const BuildingList& buildings)
     {
       NS_ASSERT_MSG (b, "building must not be null");
     }
-  m_buildings.insert (buildings.begin (), buildings.end ());
+  m_data->buildings.insert (buildings.begin (), buildings.end ());
 }
 
 
@@ -68,21 +201,21 @@ void
 Environment::AddFoliage (Ptr<Foliage> foliage)
 {
   NS_ASSERT_MSG (foliage, "foliage must not be null");
-  m_foliage.insert (foliage);
+  m_data->foliage.insert (foliage);
 }
 
 bool
 Environment::IntersectsBuildings (const LineSegment2d& line) const
 {
   NS_LOG_FUNCTION (this << boost::geometry::wkt (line));
-  return IntersectsAny (m_buildings, line);
+  return IntersectsAny (m_data->buildings, line);
 }
 
 bool
 Environment::IntersectsFoliage (const LineSegment2d& line) const
 {
   NS_LOG_FUNCTION (this << boost::geometry::wkt (line));
-  return IntersectsAny (m_foliage, line);
+  return IntersectsAny (m_data->foliage, line);
 }
 
 
@@ -90,11 +223,8 @@ void
 Environment::Intersect (const LineSegment2d& line, BuildingList& outBuildings)
 {
   NS_LOG_FUNCTION (this << boost::geometry::wkt (line));
-
-  m_buildings.query (
-      boost::geometry::index::intersects (line),
-      std::back_inserter (outBuildings));
-
+  FindObjectsThatIntersect (m_data->buildings, line,
+			    std::back_inserter(outBuildings));
   NS_LOG_LOGIC ("Found " << outBuildings.size ()
 		<< " intersections with buildings");
 }
@@ -103,11 +233,8 @@ void
 Environment::Intersect (const LineSegment2d& line, FoliageList& outFoliage)
 {
   NS_LOG_FUNCTION (this << boost::geometry::wkt (line));
-
-  m_foliage.query (
-      boost::geometry::index::intersects (line),
-      std::back_inserter (outFoliage));
-
+  FindObjectsThatIntersect (m_data->foliage, line,
+			    std::back_inserter(outFoliage));
   NS_LOG_LOGIC ("Found " << outFoliage.size ()
 		<< " intersections with foliage");
 }
@@ -117,8 +244,17 @@ Environment::Intersect (const LineSegment2d& line, VehicleList& outVehicles)
 {
   NS_LOG_FUNCTION (this << boost::geometry::wkt (line));
 
-  // TODO: implement this
-  NS_LOG_WARN ("Not implemented (yet)");
+  // update the vehicle tree if necessary
+  CheckVehcileTree ();
+
+  FindObjectsThatIntersect (
+      m_data->vehicleTree, line,
+      boost::make_function_output_iterator(
+	  [&outVehicles](const typename Data::VehicleTree::value_type& v)
+	  { outVehicles.push_back (v.second); }));
+
+  NS_LOG_LOGIC ("Found " << outVehicles.size ()
+		<< " intersections with vehicles");
 }
 
 void
@@ -128,7 +264,9 @@ Environment::FindInEllipse (const Point2d& p1, const Point2d& p2, double range,
   NS_LOG_FUNCTION (
       this << boost::geometry::wkt (p1) << boost::geometry::wkt (p2) << range);
 
-  FindObjectsInEllipse (m_buildings, p1, p2, range, outBuildings);
+  FindObjectsInEllipse (
+      m_data->buildings, p1, p2, range,
+      std::back_inserter(outBuildings));
 
   NS_LOG_LOGIC ("Found " << outBuildings.size () << " buildings in ellipse r="
 		<< range << "m around " << boost::geometry::wkt (p1)
@@ -142,7 +280,9 @@ Environment::FindInEllipse (const Point2d& p1, const Point2d& p2, double range,
   NS_LOG_FUNCTION (
       this << boost::geometry::wkt (p1) << boost::geometry::wkt (p2) << range);
 
-  FindObjectsInEllipse (m_foliage, p1, p2, range, outFoliage);
+  FindObjectsInEllipse (
+      m_data->foliage, p1, p2, range,
+      std::back_inserter(outFoliage));
 
   NS_LOG_LOGIC ("Found " << outFoliage.size () << " foliage objects in ellipse r="
 		<< range << "m around " << boost::geometry::wkt (p1)
@@ -157,8 +297,17 @@ Environment::FindInEllipse (const Point2d& p1, const Point2d& p2, double range,
   NS_LOG_FUNCTION (
       this << boost::geometry::wkt (p1) << boost::geometry::wkt (p2) << range);
 
-  // TODO: implement this
-  NS_LOG_WARN ("Not implemented (yet)");
+  CheckVehcileTree ();
+  FindObjectsInEllipse (
+      m_data->vehicleTree, p1, p2, range,
+      boost::make_function_output_iterator(
+      	  [&outVehicles](const typename Data::VehicleTree::value_type& v)
+      	  { outVehicles.push_back (v.second); })
+      );
+
+  NS_LOG_LOGIC ("Found " << outVehicles.size () << " vehicles in ellipse r="
+		<< range << "m around " << boost::geometry::wkt (p1)
+		<< " and " << boost::geometry::wkt (p2));
 }
 
 void
@@ -174,13 +323,54 @@ Environment::FindAllInEllipse (const Point2d& p1, const Point2d& p2, double rang
   NS_LOG_LOGIC ("Bounding box: " << boost::geometry::wkt (bBox));
 
   // collect buildings
-  FindObjectsInEllipse (m_buildings, bBox, p1, p2, range, outObjects.buildings);
+  FindObjectsInEllipse (
+      m_data->buildings, bBox, p1, p2, range,
+      std::back_inserter(outObjects.buildings));
 
   // collect foliage
-  FindObjectsInEllipse (m_foliage, bBox, p1, p2, range, outObjects.foliage);
+  FindObjectsInEllipse (
+      m_data->foliage, bBox, p1, p2, range,
+      std::back_inserter(outObjects.foliage));
 
-  // TODO: collect vehicles
+  // collect vehicles
+  CheckVehcileTree ();
+  FindObjectsInEllipse (
+      m_data->vehicleTree, bBox, p1, p2, range,
+      boost::make_function_output_iterator(
+      	  [&outObjects](const typename Data::VehicleTree::value_type& v)
+      	  { outObjects.vehicles.push_back (v.second); })
+      );
+}
 
+void
+Environment::CheckVehcileTree ()
+{
+  // always rebuild if sizes differ
+  bool rebuildTree = m_data->vehicles.size () != m_data->vehicleTree.size ();
+
+  // check if it is time again
+  if (m_lastVehicleTreeRebuild + m_vehicleTreeRebuildInterval < Simulator::Now ())
+    {
+      rebuildTree = true;
+    }
+
+  if (rebuildTree)
+    {
+      NS_LOG_LOGIC ("Rebuilding vehicle tree");
+
+      // clear existing tree
+      m_data->vehicleTree.clear ();
+
+      // add all vehicles to the tree
+      for (auto v : m_data->vehicles)
+	{
+	  // insert vehicle with updated bounding box
+	  // TODO: enlarge bounding box to compensate for movement between updates
+	  m_data->vehicleTree.insert (std::make_pair (v->GetBoundingBox (), v));
+	}
+
+      m_lastVehicleTreeRebuild = Simulator::Now ();
+    }
 }
 
 }  // namespace gemv2

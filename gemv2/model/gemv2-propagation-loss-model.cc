@@ -61,6 +61,31 @@ constexpr ns3::gemv2::MinMedMaxDoubleValue
 // Model for NLOSb links
 constexpr ns3::gemv2::NLOSbModelType DEFAULT_NLOSB_MODEL =
     ns3::gemv2::NLOSB_MODEL_LOG_DISTANCE;
+
+
+
+/*
+ * Some small helper functions
+ */
+
+//! Remove @a v.first and @a v.second from the provided list.
+void
+RemoveVehicles (ns3::gemv2::Environment::VehicleList& l,
+		const std::pair<ns3::Ptr<ns3::gemv2::Vehicle>,
+			        ns3::Ptr<ns3::gemv2::Vehicle>>& v)
+{
+  if (v.first)
+    {
+      l.erase (std::remove (l.begin (), l.end (), v.first), l.end ());
+    }
+
+  if (v.second)
+    {
+      l.erase (std::remove (l.begin (), l.end (), v.second), l.end ());
+    }
+}
+
+
 }  // namespace
 
 
@@ -189,10 +214,8 @@ Gemv2PropagationLossModel::DoCalcRxPower (double txPowerDbm,
   NS_ASSERT (b);
 
   // Get positions
-  auto posA = a->GetPosition ();
-  auto posB = b->GetPosition ();
-
-  double distance = CalculateDistance (posA, posB);
+  auto positions = std::make_pair (a->GetPosition (), b->GetPosition ());
+  double distance = CalculateDistance (positions.first, positions.second);
 
   if (distance > m_maxLOSCommRange)
     {
@@ -201,12 +224,13 @@ Gemv2PropagationLossModel::DoCalcRxPower (double txPowerDbm,
 	  txPowerDbm, distance, gemv2::LinkType::UNKNOWN);
     }
 
-  // Generate 2D points
-  auto pointA = gemv2::MakePoint2d (posA);
-  auto pointB = gemv2::MakePoint2d (posB);
+  // Get involved vehicles (if set and available)
+  auto involvedVehicles = std::make_pair (a->GetObject<gemv2::Vehicle> (),
+					  b->GetObject<gemv2::Vehicle> ());
 
   // Make line segment between points
-  gemv2::LineSegment2d lineOfSight (pointA, pointB);
+  gemv2::LineSegment2d lineOfSight (gemv2::MakePoint2d (positions.first),
+				    gemv2::MakePoint2d (positions.second));
 
   // Lets start without attenuation
   double attenuationDbm = 0;
@@ -250,8 +274,10 @@ Gemv2PropagationLossModel::DoCalcRxPower (double txPowerDbm,
       // No buildings or foliage, check for obstructing vehicles
       m_environment->Intersect (lineOfSight, vehiclesInLos);
 
-      // TODO: remove source and destination from result,
-      //       otherwise, we will always intersect with vehicles
+      // remove involved vehicles from list
+      RemoveVehicles (vehiclesInLos, involvedVehicles);
+
+      // check if there are other vehicles in the LOS
       if (!vehiclesInLos.empty ())
 	{
 	  NS_LOG_LOGIC (""
@@ -271,6 +297,12 @@ Gemv2PropagationLossModel::DoCalcRxPower (double txPowerDbm,
 	{
 	  NS_LOG_LOGIC ("LOS is clear -> link type: LOS");
 
+	  /*
+	   * Note: No need to check the distance here since we checked
+	   *       this in the beginning to avoid searching the environment
+	   *       for links beyond the maximum communication range.
+	   */
+
 	  effectiveComRange = m_maxLOSCommRange;
 	  linkType = gemv2::LinkType::LOS;
 	}
@@ -282,15 +314,16 @@ Gemv2PropagationLossModel::DoCalcRxPower (double txPowerDbm,
   // Find all objects in joint communication ellipse
   gemv2::Environment::ObjectCollection jointObjects;
   m_environment->FindAllInEllipse (
-      pointA, pointB, effectiveComRange, jointObjects);
+      lineOfSight.first, lineOfSight.second, effectiveComRange, jointObjects);
 
-  // TODO: remove source/destination vehicles from object set
+  // remove sender and receiver from list
+  RemoveVehicles (jointObjects.vehicles, involvedVehicles);
 
   // TODO: calculate large scale variations based on link type
   (void) linkType;
 
   // add small scale variations
-  attenuationDbm += CalculateSmallScaleVariations (pointA, pointB);
+  attenuationDbm += CalculateSmallScaleVariations (lineOfSight.first, lineOfSight.second);
 
   return txPowerDbm - attenuationDbm;
 }

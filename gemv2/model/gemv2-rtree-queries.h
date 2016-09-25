@@ -25,74 +25,93 @@ namespace ns3
 {
 namespace gemv2
 {
+namespace detail
+{
+// Specialize this with a AdapterType typedef to allow automatic
+// selection of the shape adapter
+template<typename T>
+struct ShapeAdapterTrait {};
+}
 
 /*!
  * @brief Test if the provided geometry intersects with anything in the tree
- * @param tree	Tree to check
- * @param g	Geometry to test
+ * @param tree		Tree to check
+ * @param g		Geometry to test
+ * @param shaper	Adapter to access the object shape
  * @return True if @a g intersects at least with one object in @a tree
  */
-template<typename TreeType, typename Geometry>
+template<typename TreeType, typename Geometry,
+	 typename ShapeAdapter = typename detail::ShapeAdapterTrait<TreeType>::AdapterType>
 bool
-IntersectsAny (const TreeType& tree, const Geometry& g)
+IntersectsAny (const TreeType& tree, const Geometry& g,
+	       ShapeAdapter shaper = ShapeAdapter ())
 {
-  return tree.qbegin (boost::geometry::index::intersects (g)) != tree.qend ();
+  return tree.qbegin (
+      boost::geometry::index::intersects (g) &&
+      boost::geometry::index::satisfies (
+	  [&g, &shaper](const typename TreeType::value_type& v)
+	  { return boost::geometry::intersects (shaper (v), g);}
+	)
+      ) != tree.qend ();
 }
 
 /*!
- * @brief Find objects within range around a position.
- *
- * This version of the method calculates the bounding box using
- * @c MakeBoundingBoxCircle based on @a position and @a range.
- *
- * @param tree		Tree to query
- * @param position	Position to query for
- * @param range		Maximum distance from @a position
- * @param result	All objects in @a tree with distance to @a position
- * 			less than @a range are added here
+ * @brief Find objects intersecting a geometry.
+ * @param tree			Tree to query
+ * @param g			Geometry to check for intersections
+ * @param outputIterator	All objects intersecting with @a g are added here
+ * @param shaper		Adapter to access the shape of the stored object
  */
-template<typename TreeType, typename OutputType>
+template<typename TreeType, typename Geometry,
+         typename OutputIterator,
+	 typename ShapeAdapter = typename detail::ShapeAdapterTrait<TreeType>::AdapterType>
 void
-FindObjectsInRange (const TreeType& tree, const Point2d& position,
-		    double range, OutputType& result)
+FindObjectsThatIntersect (
+    const TreeType& tree, const Geometry& g,
+    OutputIterator outputIterator,
+    ShapeAdapter shaper = ShapeAdapter ())
 {
-  // make bounding box around circle
-  Box2d bBox = MakeBoundingBoxCircle (position, range);
-
-  // query the tree with bounding box and range condition
-  FindObjectsInRange (tree, bBox, position, range, result);
+  tree.query (
+      boost::geometry::index::intersects (g) &&
+      boost::geometry::index::satisfies (
+      	  [&g, &shaper](const typename TreeType::value_type& v)
+      	  { return boost::geometry::intersects (shaper(v), g);}
+      	),
+	outputIterator);
 }
-
 
 /*!
  * @brief Find objects with maximum accumulated distance to two points.
- * @param tree		Tree to query
- * @param bBox		Bounding box to limit the search
- * @param p1		First focal point
- * @param p2		Second focal point
- * @param range		Maximum distance from @a p1 and @a p2 combined
- * @param result	All objects in @a tree with distance sum to @a p1 and
- * 			@a p2 less than @a range are added here
+ * @param tree		  Tree to query
+ * @param bBox		  Bounding box to limit the search
+ * @param p1		  First focal point
+ * @param p2		  Second focal point
+ * @param range		  Maximum distance from @a p1 and @a p2 combined
+ * @param outputIterator  All objects in @a tree with distance sum to
+ * 			  @a p1 and @a p2 less than @a range are added here
+ * @param shaper	  Adapter to access the shape of the stored object
  */
-template<typename TreeType, typename OutputType>
+template<typename TreeType, typename OutputIterator,
+	 typename ShapeAdapter = typename detail::ShapeAdapterTrait<TreeType>::AdapterType>
 void
 FindObjectsInEllipse (const TreeType& tree, const Box2d& bBox,
 		      const Point2d& p1, const Point2d& p2,
-		      double range, OutputType& result)
+		      double range,
+		      OutputIterator outputIterator,
+		      ShapeAdapter shaper = ShapeAdapter ())
 {
   // query the tree with bounding box and range condition
   tree.query (
       boost::geometry::index::intersects (bBox) &&
       boost::geometry::index::satisfies (
-	  [range, p1, p2] (const typename TreeType::value_type& v)
+	  [range, &p1, &p2, &shaper] (const typename TreeType::value_type& v)
 	  {
 	    return
-		boost::geometry::distance (p1, v->GetShape ()) +
-		boost::geometry::distance (p2, v->GetShape ())
+		boost::geometry::distance (p1, shaper (v)) +
+		boost::geometry::distance (p2, shaper (v))
 		< range;
 	  }),
-
-	  std::back_inserter (result));
+	  outputIterator);
 }
 
 /*!
@@ -102,24 +121,28 @@ FindObjectsInEllipse (const TreeType& tree, const Box2d& bBox,
  * provided points @a p1 and @a p2 as well as @a range using
  * MakeBoundingBoxEllipse().
  *
- * @param tree		Tree to query
- * @param p1		First focal point
- * @param p2		Second focal point
- * @param range		Maximum distance from @a p1 and @a p2 combined
- * @param result	All objects in @a tree with distance sum to @a p1 and
- * 			@a p2 less than @a range are added here
+ * @param tree		  Tree to query
+ * @param p1		  First focal point
+ * @param p2		  Second focal point
+ * @param range		  Maximum distance from @a p1 and @a p2 combined
+ * @param outputIterator  All objects in @a tree with distance sum to
+ * 			  @a p1 and @a p2 less than @a range are added here
+ * @param shaper	  Adapter to access the shape of the stored object
  */
-template<typename TreeType, typename OutputType>
+template<typename TreeType, typename OutputIterator,
+	 typename ShapeAdapter = typename detail::ShapeAdapterTrait<TreeType>::AdapterType>
 void
 FindObjectsInEllipse (const TreeType& tree,
 		      const Point2d& p1, const Point2d& p2,
-		      double range, OutputType& result)
+		      double range,
+		      OutputIterator outputIterator,
+		      ShapeAdapter shaper = ShapeAdapter ())
 {
   // make bounding box around ellipse
   Box2d bBox = MakeBoundingBoxEllipse (p1, p2, range);
 
   // use bounding box for query
-  FindObjectsInEllipse  (tree, bBox, p1, p2, range, result);
+  FindObjectsInEllipse  (tree, bBox, p1, p2, range, outputIterator, shaper);
 }
 
 

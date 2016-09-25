@@ -49,7 +49,7 @@ Gemv2BasicEnvironmentTestCase::Gemv2BasicEnvironmentTestCase ()
 void
 Gemv2BasicEnvironmentTestCase::DoRun (void)
 {
-  gemv2::LineSegment2d none ({25, 0}, {25, 100});
+  gemv2::LineSegment2d none ({40,0}, {55, 15});
   gemv2::LineSegment2d one ({25,0}, {50, 25});
   gemv2::LineSegment2d two ({0,0}, {100, 100});
 
