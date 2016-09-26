@@ -18,6 +18,9 @@
 #ifndef GEMV2_PROPAGATION_PARAMETERS_H
 #define GEMV2_PROPAGATION_PARAMETERS_H
 
+#include <map>
+#include <ns3/gemv2-types.h>
+
 namespace ns3
 {
 namespace gemv2
@@ -40,24 +43,8 @@ struct PropagationParameters
 
   // Small-scale signal variation parameters
 
-  //! Minimum standard deviation of small scale variation for LOS
-  double smallScaleMinFadingLOS;
-  //! Minimum standard deviation of small scale variation for NLOSv
-  double smallScaleMinFadingNLOSv;
-  //! Minimum standard deviation of small scale variation for NLOSb
-  double smallScaleMinFadingNLOSb;
-  //! Minimum standard deviation of small scale variation for NLOSf
-  double smallScaleMinFadingNLOSf;
-
-  //! Maximum standard deviation of small scale variation for LOS
-  double smallScaleMaxFadingLOS;
-  //! Maximum standard deviation of small scale variation for NLOSv
-  double smallScaleMaxFadingNLOSv;
-  //! Maximum standard deviation of small scale variation for NLOSb
-  double smallScaleMaxFadingNLOSb;
-  //! Maximum standard deviation of small scale variation for NLOSf
-  double smallScaleMaxFadingNLOSf;
-
+  //! Min/max small scale fading values per link type
+  std::map<LinkType, std::pair<double, double>> smallScaleFading;
 
   /*!
    * @brief Default constructor using V2V values from GEMV^2.
@@ -68,14 +55,12 @@ struct PropagationParameters
    */
   PropagationParameters ()
     : pathLossExpNLOSb (2.9), pathLossExpNLOSf (2.7),
-      smallScaleMinFadingLOS (3.3),
-      smallScaleMinFadingNLOSv (3.8),
-      smallScaleMinFadingNLOSb (4.1),
-      smallScaleMinFadingNLOSf (smallScaleMinFadingNLOSb),
-      smallScaleMaxFadingLOS (5.2),
-      smallScaleMaxFadingNLOSv (5.3),
-      smallScaleMaxFadingNLOSb (6.8),
-      smallScaleMaxFadingNLOSf (smallScaleMaxFadingNLOSb)
+      smallScaleFading {
+	{ LinkType::LOS, { 3.3, 5.2 }},
+	{ LinkType::NLOSv, { 3.8, 5.3 }},
+	{ LinkType::NLOSb, { 4.1, 6.8 }},
+	{ LinkType::NLOSf, { 4.1, 6.8 }}
+      }
   {
   }
 

@@ -18,6 +18,7 @@
 #include "gemv2-propagation-loss-model.h"
 
 #include <limits>
+#include <boost/math/constants/constants.hpp>
 
 #include <ns3/assert.h>
 #include <ns3/log.h>
@@ -26,7 +27,6 @@
 
 #include <ns3/mobility-model.h>
 
-#include "gemv2-environment.h"
 
 /*
  * Definition of default values used in the attributes and the default
@@ -37,6 +37,8 @@
  */
 namespace
 {
+// Factor to convert square meters to square kilometers
+constexpr double SQR_METERS_TO_SQR_KILOMETERS = 1e-6;
 
 // Frequency - default is 5.9 GHz
 constexpr double DEFAULT_FREQUENCY = 5.9e9;
@@ -62,7 +64,9 @@ constexpr ns3::gemv2::MinMedMaxDoubleValue
 constexpr ns3::gemv2::NLOSbModelType DEFAULT_NLOSB_MODEL =
     ns3::gemv2::NLOSB_MODEL_LOG_DISTANCE;
 
-
+// Maximum density values - currently just a guess
+constexpr double DEFAULT_MAX_VEHICLE_DENSITY = 500.0; // 500 vehicles/km^2
+constexpr double DEFAULT_MAX_OBJECT_DENSITY = 0.8;    // 80% covered with objects
 
 /*
  * Some small helper functions
@@ -160,7 +164,10 @@ Gemv2PropagationLossModel::Gemv2PropagationLossModel ()
     m_maxNLOSbCommRange (DEFAULT_MAX_NLOSB_COMM_RANGE),
     m_modelNLOSv (DEFAULT_NLOSV_MODEL),
     m_lossPerVehicleNLOSvSimple (DEFAULT_LOSS_PER_VEHICLE_NLOSV_SIMPLE),
-    m_modelNLOSb (DEFAULT_NLOSB_MODEL)
+    m_modelNLOSb (DEFAULT_NLOSB_MODEL),
+    m_maxVehicleDensity (DEFAULT_MAX_VEHICLE_DENSITY),
+    m_maxObjectDensity (DEFAULT_MAX_OBJECT_DENSITY),
+    m_normalRand (CreateObject<NormalRandomVariable> ())
 {
   NS_LOG_FUNCTION (this);
 }
@@ -179,10 +186,69 @@ Gemv2PropagationLossModel::SetEnviroment (Ptr<gemv2::Environment> environment)
 
 double
 Gemv2PropagationLossModel::CalculateSmallScaleVariations (
-    const gemv2::Point2d& a, const gemv2::Point2d& b) const
+    double distance, double comRange,
+    const gemv2::Environment::ObjectCollection& objects,
+    gemv2::LinkType linkType) const
 {
-  // TODO: implement this
-  return 0;
+  NS_LOG_FUNCTION (this);
+
+  // calculate area of the ellipse
+  double a = comRange / 2.0;
+  double b = std::sqrt ((a*a) - (distance*distance/4.0));
+  double ellipseArea = a * b * boost::math::constants::pi<double>();
+
+  NS_LOG_LOGIC ("Ellipse area: " << ellipseArea << " m^2");
+
+  double objectArea = 0;
+
+  // collect area covered by objects
+  for (auto const& b : objects.buildings)
+    {
+      objectArea += b->GetArea ();
+    }
+  for (auto const& f : objects.foliage)
+    {
+      objectArea += f->GetArea ();
+    }
+
+  NS_LOG_LOGIC ("Area covered by objects: " << objectArea << " m^2");
+
+  double weight =
+      std::min(
+	  1.0,
+	  std::sqrt(
+	      objects.vehicles.size () /
+	      (m_maxVehicleDensity * ellipseArea * SQR_METERS_TO_SQR_KILOMETERS)
+	    )
+	) +
+      std::min(
+	  1.0,
+	  std::sqrt(
+	      objectArea /
+	      (m_maxObjectDensity * ellipseArea)
+	    )
+      );
+
+  NS_LOG_LOGIC ("Occupancy weight: " << weight);
+
+  auto it = m_v2vPropagation.smallScaleFading.find (linkType);
+  if (it != m_v2vPropagation.smallScaleFading.end ())
+    {
+      double sigma =
+          it->second.first +
+          0.5 * weight * (it->second.second - it->second.first);
+
+      NS_ASSERT (m_normalRand);
+      double attenuation = m_normalRand->GetValue (0, sigma);
+
+      NS_LOG_LOGIC ("sigma=" << sigma << ", attenuation=" << attenuation);
+      return attenuation;
+    }
+  else
+    {
+      NS_ASSERT_MSG (false, "Unknown link type");
+      return 0;
+    }
 }
 
 double
@@ -320,10 +386,10 @@ Gemv2PropagationLossModel::DoCalcRxPower (double txPowerDbm,
   RemoveVehicles (jointObjects.vehicles, involvedVehicles);
 
   // TODO: calculate large scale variations based on link type
-  (void) linkType;
 
-  // add small scale variations
-  attenuationDbm += CalculateSmallScaleVariations (lineOfSight.first, lineOfSight.second);
+  // add small scale variations based on link type
+  attenuationDbm += CalculateSmallScaleVariations (
+      distance, effectiveComRange, jointObjects, linkType);
 
   return txPowerDbm - attenuationDbm;
 }
@@ -332,7 +398,11 @@ int64_t
 Gemv2PropagationLossModel::DoAssignStreams (int64_t stream)
 {
   NS_LOG_FUNCTION (this << stream);
-  return 0;
+  if (m_normalRand)
+    {
+      m_normalRand->SetStream(stream++);
+    }
+  return 1;
 }
 
 }

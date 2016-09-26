@@ -49,6 +49,13 @@ public:
   Box2d const&
   GetBoundingBox () const;
 
+  /*!
+   * @brief Get the area covered by the foliage object
+   * @return Area of the foliage object in m^2
+   */
+  double
+  GetArea () const;
+
 private:
 
   //! Shape of the foliage
@@ -56,6 +63,9 @@ private:
 
   //! Bounding box of the foliage
   Box2d m_boundingBox;
+
+  //! Area covered by the foliage objects
+  double m_area;
 };
 
 }  // namespace gemv2

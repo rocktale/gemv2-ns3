@@ -24,15 +24,9 @@
 #include "gemv2-types.h"
 #include "gemv2-propagation-parameters.h"
 #include "gemv2-geometry.h"
+#include "gemv2-environment.h"
 
 namespace ns3 {
-
-// forward declarations
-namespace gemv2 {
-
-class Environment;
-
-}  // namespace gemv2
 
 /*!
  * @brief Propagation loss model based on GEMV^2.
@@ -84,13 +78,17 @@ private:
 
   /*!
    * @brief Calculate the small scale variations for the link.
-   * @param a	First point
-   * @param b	Second point
+   * @param distance	Distance between sender and receiver
+   * @param comRange	Communication range
+   * @param objects	Objects in the ellipse around sender and receiver
+   * @param linkType	Type of the link
    * @return Small scale variations in dBm
    */
   double
   CalculateSmallScaleVariations (
-      const gemv2::Point2d& a, const gemv2::Point2d& b) const;
+      double distance, double comRange,
+      const gemv2::Environment::ObjectCollection& objects,
+      gemv2::LinkType linkType) const;
 
 
   /*!
@@ -157,6 +155,20 @@ private:
 
   //! Model for NLOSb links
   gemv2::NLOSbModelType m_modelNLOSb;
+
+  // Maximum values for vehicle and object density
+
+  //! Maximum number of vehicles per km^2
+  double m_maxVehicleDensity;
+
+  //! Maximum area (km^2) occupied by objects per km^2
+  double m_maxObjectDensity;
+
+  /*
+   * Random variables
+   */
+
+  Ptr<NormalRandomVariable> m_normalRand;
 };
 
 }  // namespace ns3

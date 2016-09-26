@@ -52,6 +52,13 @@ public:
   GetBoundingBox () const;
 
   /*!
+   * @brief Get the area covered by the building
+   * @return Area of the building in m^2
+   */
+  double
+  GetArea () const;
+
+  /*!
    * @brief Get the relative permittivity of the building surface
    * @return Relative permittivity value for the building surface
    */
@@ -72,6 +79,9 @@ private:
 
   //! Bounding box of the building
   Box2d m_boundingBox;
+
+  //! Area covered by the building
+  double m_area;
 
   //! Relative permittivity of the buildings surface
   double m_relativePermittivity;

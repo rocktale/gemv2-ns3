@@ -37,6 +37,10 @@ Building::Building (Polygon2d const& shape)
   // calculate bounding box
   boost::geometry::envelope (m_shape, m_boundingBox);
   NS_LOG_LOGIC ("Building bounding box: " << boost::geometry::wkt (m_boundingBox));
+
+  // calculate area
+  m_area = boost::geometry::area (m_shape);
+  NS_LOG_LOGIC ("Area of the building: " << m_area << " m^2");
 }
 
 Polygon2d const&
@@ -49,6 +53,12 @@ Box2d const&
 Building::GetBoundingBox () const
 {
   return m_boundingBox;
+}
+
+double
+Building::GetArea () const
+{
+  return m_area;
 }
 
 double
