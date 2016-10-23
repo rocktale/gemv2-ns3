@@ -26,6 +26,7 @@
 #include <ns3/enum.h>
 
 #include <ns3/mobility-model.h>
+#include <ns3/gemv2-models.h>
 
 
 /*
@@ -45,7 +46,10 @@ constexpr double DEFAULT_FREQUENCY = 5.9e9;
 
 // Antenna polarization
 constexpr ns3::gemv2::AntennaPolarization DEFAULT_ANTENNA_POLARIZATION =
-    ns3::gemv2::ANTENNA_POLARIZATION_VERTICAL;
+    ns3::gemv2::ANTENNA_POLARIZATION_HORIZONTAL;
+
+// Permittivity for ground reflections (from the GEMV^2 measurements in Porto)
+constexpr double DEFAULT_GROUND_PERMITTIVITY = 1.003;
 
 // Communication ranges
 constexpr double DEFAULT_MAX_LOS_COMM_RANGE = 1000.0;
@@ -121,7 +125,12 @@ Gemv2PropagationLossModel::GetTypeId (void)
 		     MakeEnumChecker (
 			 gemv2::ANTENNA_POLARIZATION_VERTICAL, "vertical",
 			 gemv2::ANTENNA_POLARIZATION_HORIZONTAL, "horizontal"))
-      .AddAttribute ("MaxLOSCommunicationRange",
+       .AddAttribute ("GroundPermittivity",
+		      "Relative permittivity for ground reflections",
+		      DoubleValue (DEFAULT_GROUND_PERMITTIVITY),
+		      MakeDoubleAccessor (&Gemv2PropagationLossModel::m_groundPermittivity),
+		      MakeDoubleChecker<double> ())
+       .AddAttribute ("MaxLOSCommunicationRange",
 		     "Maximum LOS communication range [m].",
 		     DoubleValue (DEFAULT_MAX_LOS_COMM_RANGE),
 		     MakeDoubleAccessor (&Gemv2PropagationLossModel::m_maxLOSCommRange),
@@ -159,6 +168,7 @@ Gemv2PropagationLossModel::Gemv2PropagationLossModel ()
   : m_environment (gemv2::Environment::GetGlobal ()),
     m_frequency (DEFAULT_FREQUENCY),
     m_antennaPolarization (DEFAULT_ANTENNA_POLARIZATION),
+    m_groundPermittivity (DEFAULT_GROUND_PERMITTIVITY),
     m_maxLOSCommRange (DEFAULT_MAX_LOS_COMM_RANGE),
     m_maxNLOSvCommRange (DEFAULT_MAX_NLOSV_COMM_RANGE),
     m_maxNLOSbCommRange (DEFAULT_MAX_NLOSB_COMM_RANGE),
@@ -266,6 +276,35 @@ Gemv2PropagationLossModel::CalculateOutOfRangeNoise (
   return -std::numeric_limits<double>::max ();
 }
 
+double
+Gemv2PropagationLossModel::CalculateSimpleNlosvLoss (
+    double distance, std::size_t vehiclesInLos) const
+{
+  NS_LOG_FUNCTION (this << distance << vehiclesInLos);
+
+  NS_ASSERT_MSG (vehiclesInLos > 0,
+		 "There has to be at least one vehicle in the LOS for a NLOSv link");
+
+  double freeSpaceLoss = gemv2::FreeSpaceLoss (distance, m_frequency);
+
+  /*
+   * This implementation follows the matlab code where only cases
+   * with 1, 2 or more than 2 cars
+   */
+  if (vehiclesInLos == 1)
+    {
+      return freeSpaceLoss + std::get<0>(m_lossPerVehicleNLOSvSimple);
+    }
+  else if (vehiclesInLos == 2)
+    {
+      return freeSpaceLoss + std::get<1>(m_lossPerVehicleNLOSvSimple);
+    }
+  else
+    {
+      return freeSpaceLoss + std::get<2>(m_lossPerVehicleNLOSvSimple);
+    }
+}
+
 /*
  * PropagationLossModel methods
  */
@@ -281,13 +320,19 @@ Gemv2PropagationLossModel::DoCalcRxPower (double txPowerDbm,
 
   // Get positions
   auto positions = std::make_pair (a->GetPosition (), b->GetPosition ());
-  double distance = CalculateDistance (positions.first, positions.second);
 
-  if (distance > m_maxLOSCommRange)
+  // calculate 2d distance between both peers
+  double distance2d =
+      std::sqrt(
+	  std::pow(positions.first.x - positions.second.x, 2) +
+	  std::pow(positions.first.y - positions.second.y, 2)
+      );
+
+  if (distance2d > m_maxLOSCommRange)
     {
       NS_LOG_LOGIC ("Nodes are out of range.");
       return CalculateOutOfRangeNoise (
-	  txPowerDbm, distance, gemv2::LinkType::UNKNOWN);
+	  txPowerDbm, distance2d, gemv2::LinkType::UNKNOWN);
     }
 
   // Get involved vehicles (if set and available)
@@ -299,7 +344,7 @@ Gemv2PropagationLossModel::DoCalcRxPower (double txPowerDbm,
 				    gemv2::MakePoint2d (positions.second));
 
   // Lets start without attenuation
-  double attenuationDbm = 0;
+  double rxPowerDbm = txPowerDbm;
 
   // communication range based on link type
   double effectiveComRange = -1;
@@ -312,11 +357,11 @@ Gemv2PropagationLossModel::DoCalcRxPower (double txPowerDbm,
   if (m_environment->IntersectsBuildings (lineOfSight))
     {
       NS_LOG_LOGIC ("LOS intersects with buildings -> link type: NLOSb");
-      if (distance > m_maxNLOSbCommRange)
+      if (distance2d > m_maxNLOSbCommRange)
 	{
-	  NS_LOG_LOGIC ("NLOSb link out of range: " << distance);
+	  NS_LOG_LOGIC ("NLOSb link out of range: " << distance2d);
 	  return CalculateOutOfRangeNoise (
-	      txPowerDbm, distance, gemv2::LinkType::NLOSb);
+	      txPowerDbm, distance2d, gemv2::LinkType::NLOSb);
 	}
 
       effectiveComRange = m_maxNLOSbCommRange;
@@ -325,11 +370,11 @@ Gemv2PropagationLossModel::DoCalcRxPower (double txPowerDbm,
   else if (m_environment->IntersectsFoliage (lineOfSight))
     {
       NS_LOG_LOGIC ("LOS intersects with foliage -> link type: NLOSf");
-      if (distance > m_maxNLOSbCommRange)
+      if (distance2d > m_maxNLOSbCommRange)
 	{
-	  NS_LOG_LOGIC ("NLOSf link out of range: " << distance);
+	  NS_LOG_LOGIC ("NLOSf link out of range: " << distance2d);
 	  return CalculateOutOfRangeNoise (
-	      txPowerDbm, distance, gemv2::LinkType::NLOSf);
+	      txPowerDbm, distance2d, gemv2::LinkType::NLOSf);
 	}
 
       effectiveComRange = m_maxNLOSbCommRange;
@@ -349,11 +394,11 @@ Gemv2PropagationLossModel::DoCalcRxPower (double txPowerDbm,
 	  NS_LOG_LOGIC (""
 	      "LOS intersects with other vehicles -> link type: NLOSv");
 
-	  if (distance > m_maxNLOSvCommRange)
+	  if (distance2d > m_maxNLOSvCommRange)
 	    {
-	      NS_LOG_LOGIC ("NLOSv link out of range: " << distance);
+	      NS_LOG_LOGIC ("NLOSv link out of range: " << distance2d);
 	      return CalculateOutOfRangeNoise (
-		  txPowerDbm, distance, gemv2::LinkType::NLOSv);
+		  txPowerDbm, distance2d, gemv2::LinkType::NLOSv);
 	    }
 
 	  effectiveComRange = m_maxNLOSvCommRange;
@@ -385,27 +430,67 @@ Gemv2PropagationLossModel::DoCalcRxPower (double txPowerDbm,
   // remove sender and receiver from list
   RemoveVehicles (jointObjects.vehicles, involvedVehicles);
 
+  double txGainDbi = 0.0;	// TODO: get tx gain from antenna model
+  double rxGainDbi = 0.0;	// TODO: get rx gain from antenna model
+
   // TODO: calculate large scale variations based on link type
   switch (linkType)
   {
     case gemv2::LinkType::LOS:
-      break;
+      {
+	/*
+	 * LOS links use the two-ray-ground loss model for the large
+	 * scale propagation loss.
+	 */
+	double eTot = gemv2::TwoRayGroundLoss(
+	    distance2d,
+	    positions.first.z, positions.second.z,
+	    m_frequency, txPowerDbm, txGainDbi,
+	    m_antennaPolarization,
+	    m_groundPermittivity);
+
+	rxPowerDbm = gemv2::EfieldToPowerDbm(
+	    eTot, rxGainDbi,
+	    m_frequency);
+	NS_LOG_LOGIC ("Two-ray-ground loss: " << (txPowerDbm - rxPowerDbm));
+	break;
+      }
     case gemv2::LinkType::NLOSv:
+      switch (m_modelNLOSv)
+      {
+	case gemv2::NLOSV_MODEL_SIMPLE:
+	  rxPowerDbm = txPowerDbm + txGainDbi + rxGainDbi -
+	      CalculateSimpleNlosvLoss (
+		  CalculateDistance (positions.first, positions.second),
+		  vehiclesInLos.size ());
+	  NS_LOG_LOGIC ("Simple NLOSv model loss: " << (txPowerDbm - rxPowerDbm));
+	  break;
+	case gemv2::NLOSV_MODEL_ITU_R_MULTIPLE_KNIFE_EDGE:
+	case gemv2::NLOSV_MODEL_BULLINGTON_KNIFE_EDGE:
+	  NS_ASSERT_MSG (false, "NLOSv model not implemented (yet)");
+	  break;
+	default:
+	  NS_ASSERT_MSG (false, "Unknown NLOSv model");
+	  break;
+      }
       break;
+
     case gemv2::LinkType::NLOSb:
       break;
+
     case gemv2::LinkType::NLOSf:
       break;
+
     default:
       NS_ASSERT_MSG (false, "Link type must not be undefined at this point");
   }
 
 
   // add small scale variations based on link type
-  attenuationDbm += CalculateSmallScaleVariations (
-      distance, effectiveComRange, jointObjects, linkType);
+  rxPowerDbm -= CalculateSmallScaleVariations (
+      distance2d, effectiveComRange, jointObjects, linkType);
 
-  return txPowerDbm - attenuationDbm;
+  return rxPowerDbm;
 }
 
 int64_t

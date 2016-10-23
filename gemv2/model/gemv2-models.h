@@ -25,6 +25,15 @@ namespace ns3 {
 namespace gemv2 {
 
 /*!
+ * @brief Calculate free space loss based on distance and frequency
+ * @param distance	Distance between sender and receiver
+ * @param frequency	Carrier frequency of the signal
+ * @return Path loss (dBm) according to the free space model
+ */
+double
+FreeSpaceLoss (double distance, double frequency);
+
+/*!
  * @brief Calculate the two ray ground path loss.
  * @param distance	 Distance between sender and receiver (2d) [m]
  * @param txHeight	 Height of the transmitter antenna [m]

@@ -103,6 +103,20 @@ private:
 			    double distance,
 			    gemv2::LinkType linkType) const;
 
+  /*!
+   * @brief Calculate the loss for NLOSv links with the simple model.
+   *
+   * This model uses free-space propagation together with additional
+   * attenuation based on the number of vehicles in the LOS path.
+   *
+   * @param distance		Distance between sender and receiver [m]
+   * @param vehiclesInLos	Number of vehicles in the LOS path
+   * @return Path loss (dBm)
+   */
+  double
+  CalculateSimpleNlosvLoss (double distance,
+			    std::size_t vehiclesInLos) const;
+
   /*
    * PropagationLossModel methods
    */
@@ -132,6 +146,9 @@ private:
 
   //! Polarization of the antennas
   gemv2::AntennaPolarization m_antennaPolarization;
+
+  //! Relative permittivity for ground reflections
+  double m_groundPermittivity;
 
   // Communication ranges
 

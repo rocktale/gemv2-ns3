@@ -33,6 +33,14 @@ namespace ns3 {
 namespace gemv2 {
 
 double
+FreeSpaceLoss (double distance, double frequency)
+{
+  return 20.0 * std::log10 (
+      4.0 * constants::pi<double> () * distance * frequency / speedOfLight);
+}
+
+
+double
 TwoRayGroundLoss (
     double distance, double txHeight, double rxHeight,
     double frequency, double txPower, double txGain,
