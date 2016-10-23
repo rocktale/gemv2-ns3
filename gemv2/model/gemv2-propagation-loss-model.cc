@@ -386,6 +386,20 @@ Gemv2PropagationLossModel::DoCalcRxPower (double txPowerDbm,
   RemoveVehicles (jointObjects.vehicles, involvedVehicles);
 
   // TODO: calculate large scale variations based on link type
+  switch (linkType)
+  {
+    case gemv2::LinkType::LOS:
+      break;
+    case gemv2::LinkType::NLOSv:
+      break;
+    case gemv2::LinkType::NLOSb:
+      break;
+    case gemv2::LinkType::NLOSf:
+      break;
+    default:
+      NS_ASSERT_MSG (false, "Link type must not be undefined at this point");
+  }
+
 
   // add small scale variations based on link type
   attenuationDbm += CalculateSmallScaleVariations (

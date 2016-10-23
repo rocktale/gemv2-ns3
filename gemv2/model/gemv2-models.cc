@@ -43,9 +43,13 @@ TwoRayGroundLoss (
   double dLos =
       std::sqrt (std::pow (txHeight-rxHeight, 2) + std::pow (distance, 2));
 
+  // ground reflected distance
+  double dGround =
+      std::sqrt (std::pow (txHeight+rxHeight, 2) + std::pow (distance, 2));
+
   // sine and cosine of the incident angle
-  double sinTheta = (txHeight + rxHeight) / dLos;
-  double cosTheta = distance / dLos;
+  double sinTheta = (txHeight + rxHeight) / dGround;
+  double cosTheta = distance / dGround;
 
   // calculate effective reflection coefficient
   double reflectionCoefficient = 0;
@@ -55,9 +59,25 @@ TwoRayGroundLoss (
   switch(polarization)
   {
     case ANTENNA_POLARIZATION_VERTICAL:
+      /*
+       * This is the version also used in the matlab script. This leads
+       * to a strange behavior for large distances, where the received power
+       * does not drop by the distance to the power of 4. Literature (and
+       * also wikipedia:
+       * https://en.wikipedia.org/wiki/Two-ray_ground-reflection_model
+       * provide a slight variation that leads to different results that
+       * are much closer to the horizontal polarization case. We'll stick
+       * to the matlab code for now, but it might be worth checking
+       * if this is really the intended behavior.
+       */
       reflectionCoefficient =
-	  (-permittivity * sinTheta + sqrtPermMinusCosThetaSquared) /
+	  ((-permittivity) * sinTheta + sqrtPermMinusCosThetaSquared) /
 	  (permittivity * sinTheta + sqrtPermMinusCosThetaSquared);
+
+      // alternative from wikipedia
+//      reflectionCoefficient =
+//	  (sinTheta - sqrtPermMinusCosThetaSquared/permittivity) /
+//	  (sinTheta + sqrtPermMinusCosThetaSquared/permittivity);
       break;
     case ANTENNA_POLARIZATION_HORIZONTAL:
       reflectionCoefficient =
@@ -70,25 +90,21 @@ TwoRayGroundLoss (
   }
 
   // power to W
-  txPower = std::pow (10.0, txPower/10.0) / 1000.0;
+  double txPowerInW = std::pow (10.0, txPower/10.0) / 1000.0;
 
   // reference distance in meters
   double d0 = 1.0;
 
   // gain from dBi to factor
-  txGain = std::pow (10.0, txGain/10.0);
+  double txGainFactor = std::pow (10.0, txGain/10.0);
 
   // reference power flux density at distance d0
   double Pd0 =
-      txPower * txGain /
+      txPowerInW * txGainFactor /
       (4.0 * constants::pi<double> () * std::pow (d0, 2));
 
   // reference E-field
   double E0 = std::sqrt (Pd0 * 120.0 * constants::pi<double> ());
-
-  // ground reflected distance
-  double dGround =
-      std::sqrt (std::pow (txHeight+rxHeight, 2) + std::pow (distance, 2));
 
   // angular frequency
   double frequencyAngular = constants::two_pi<double> () * frequency;
@@ -101,7 +117,7 @@ TwoRayGroundLoss (
    *       obviously always 0.
    */
   return (E0 * d0 / dLos) +
-	  reflectionCoefficient * E0 * d0 / dGround *
+	  reflectionCoefficient * (E0 * d0 / dGround) *
 	  std::cos (frequencyAngular * (dLos/speedOfLight - dGround/speedOfLight));
 }
 
@@ -109,11 +125,11 @@ double
 EfieldToPowerDbm (double eTot, double rxGain, double frequency)
 {
   // gain from dBi to factor
-  rxGain = std::pow (10.0, rxGain/10.0);
+  double rxGainFactor = std::pow (10.0, rxGain/10.0);
 
   // received power in W
   double rxPowerW =
-      std::pow (eTot, 2) * rxGain * std::pow (speedOfLight / frequency, 2) /
+      std::pow (eTot, 2) * rxGainFactor * std::pow (speedOfLight / frequency, 2) /
       (480.0 * constants::pi_sqr<double> ());
 
   // return received power in dBm
