@@ -72,8 +72,13 @@ RunExperiment(const Configuration& config, std::ostream& os)
        d += config.distanceStepInMeters)
     {
       double frequency = config.freqInGhz * 1e09;
+
+      auto p1 = Vector (0, 0, config.txHeightInMeters);
+      auto p2 = Vector (0, d, config.rxHeightInMeters);
+
       double eTot = gemv2::TwoRayGroundLoss(
-	  d, config.txHeightInMeters, config.rxHeightInMeters,
+	  CalculateDistance(p1, p2),
+	  p1, p2,
 	  frequency, config.txPowerInDbm, 0,
 	  config.polarization, config.permittivity);
 

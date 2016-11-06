@@ -40,6 +40,14 @@ namespace ns3 {
 class Gemv2PropagationLossModel : public PropagationLossModel
 {
 public:
+  /*
+   * Some internal types to make function calls more readable
+   */
+  using VehiclePair = std::pair<Ptr<gemv2::Vehicle>, Ptr<gemv2::Vehicle>>;
+
+  /*
+   * Methods provided by the model
+   */
 
   /*!
    * @brief Get the type id of this  object.
@@ -77,18 +85,19 @@ private:
   void operator= (const Gemv2PropagationLossModel &) = delete;
 
   /*!
-   * @brief Calculate the small scale variations for the link.
-   * @param distance	Distance between sender and receiver
+   * @brief Calculate the small scale variations for a link.
+   * @param distance2d	Distance between sender and receiver (2d)
    * @param comRange	Communication range
    * @param objects	Objects in the ellipse around sender and receiver
-   * @param linkType	Type of the link
+   * @param sigmaMin	Minimum value for sigma (depends on the link type)
+   * @param sigmaMax	Maximum value for sigma (depends on the link type)
    * @return Small scale variations in dBm
    */
   double
   CalculateSmallScaleVariations (
-      double distance, double comRange,
+      double distance2d, double comRange,
       const gemv2::Environment::ObjectCollection& objects,
-      gemv2::LinkType linkType) const;
+      double sigmaMin, double sigmaMax) const;
 
 
   /*!
@@ -117,6 +126,18 @@ private:
   CalculateSimpleNlosvLoss (double distance,
 			    std::size_t vehiclesInLos) const;
 
+  /*!
+   * @brief Get the environment objects in the communication ellipse.
+   * @param lineOfSight		Line of sight between sender and receiver
+   * @param comRange		Communication range (meters)
+   * @param involvedVehicles	Sender/receiver vehicles
+   * @return Collection of found objects
+   */
+  gemv2::Environment::ObjectCollection
+  GetObjectsInComEllipse (const gemv2::LineSegment2d& lineOfSight,
+			  double comRange,
+			  const VehiclePair& involvedVehicles) const;
+
   /*
    * PropagationLossModel methods
    */
@@ -129,6 +150,40 @@ private:
   int64_t
   DoAssignStreams (int64_t stream) override;
 
+
+
+  /*
+   * Internal methods for the different link types
+   */
+
+  /*!
+   * @brief Check if the link is within range for calculation
+   * @param txPowerDbm	Transmission power in dBm
+   * @param distance2d	Distance between sender and receiver in m
+   * @return True if in range, false otherwise
+   */
+  bool
+  IsLinkInRange (double txPowerDbm, double distance) const;
+
+  double
+  CalcNlosbRxPower (double txPowerDbm, double distance) const;
+
+  double
+  CalcNlosfRxPower (double txPowerDbm, double distance) const;
+
+  double
+  CalcNlosvRxPower (double txPowerDbm, double distance,
+		    const gemv2::LineSegment2d& lineOfSight,
+		    const gemv2::Environment::VehicleList& vehiclesInLos,
+		    const VehiclePair& involvedVehicles,
+		    double txGainDbi, double rxGainDbi) const;
+
+  double
+  CalcLosRxPower (double txPowerDbm, double distance,
+		  const gemv2::LineSegment2d& lineOfSight,
+		  const Vector& txPos, const Vector& rxPos,
+		  const VehiclePair& involvedVehicles,
+		  double txGainDbi, double rxGainDbi) const;
 
   /*
    * Internal data

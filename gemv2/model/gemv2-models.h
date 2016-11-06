@@ -19,6 +19,7 @@
 #define GEMV2_MODELS_H
 
 #include <utility>
+#include <ns3/vector.h>
 #include <ns3/gemv2-types.h>
 
 namespace ns3 {
@@ -35,9 +36,9 @@ FreeSpaceLoss (double distance, double frequency);
 
 /*!
  * @brief Calculate the two ray ground path loss.
- * @param distance	 Distance between sender and receiver (2d) [m]
- * @param txHeight	 Height of the transmitter antenna [m]
- * @param rxHeight	 Height of the receiver antenna [m]
+ * @param distanceLos	 Distance between sender and receiver (LOS) [m]
+ * @param txPos	 	 Exact position of the transmitter antenna [m]
+ * @param rxPos 	 Exact position of the receiver antenna [m]
  * @param frequency	 Frequency of the signal
  * @param txPower	 Transmit power [dBm]
  * @param txGain	 Gain of the transmitter antenna [dBi]
@@ -46,7 +47,8 @@ FreeSpaceLoss (double distance, double frequency);
  * @return E-field
  */
 double
-TwoRayGroundLoss (double distance, double txHeight, double rxHeight,
+TwoRayGroundLoss (double distanceLos,
+		  const Vector& txPos, const Vector& rxPos,
 		  double frequency, double txPower, double txGain,
 		  AntennaPolarization polarization,
 		  double permittivity);

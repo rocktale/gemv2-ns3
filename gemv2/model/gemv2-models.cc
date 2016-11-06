@@ -42,22 +42,24 @@ FreeSpaceLoss (double distance, double frequency)
 
 double
 TwoRayGroundLoss (
-    double distance, double txHeight, double rxHeight,
+    double dLos, const Vector& txPos, const Vector& rxPos,
     double frequency, double txPower, double txGain,
     AntennaPolarization polarization,
     double permittivity)
 {
-  // LOS distance
-  double dLos =
-      std::sqrt (std::pow (txHeight-rxHeight, 2) + std::pow (distance, 2));
+  // 2d distance in the horizontal plane
+  double distance2d =
+      std::sqrt(
+	  std::pow (txPos.x - rxPos.x, 2) +
+	  std::pow (txPos.y - rxPos.y, 2));
 
   // ground reflected distance
   double dGround =
-      std::sqrt (std::pow (txHeight+rxHeight, 2) + std::pow (distance, 2));
+      std::sqrt (std::pow (txPos.z + rxPos.z, 2) + std::pow (distance2d, 2));
 
   // sine and cosine of the incident angle
-  double sinTheta = (txHeight + rxHeight) / dGround;
-  double cosTheta = distance / dGround;
+  double sinTheta = (txPos.z + rxPos.z) / dGround;
+  double cosTheta = distance2d / dGround;
 
   // calculate effective reflection coefficient
   double reflectionCoefficient = 0;

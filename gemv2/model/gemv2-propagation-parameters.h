@@ -18,9 +18,6 @@
 #ifndef GEMV2_PROPAGATION_PARAMETERS_H
 #define GEMV2_PROPAGATION_PARAMETERS_H
 
-#include <map>
-#include <ns3/gemv2-types.h>
-
 namespace ns3
 {
 namespace gemv2
@@ -42,9 +39,17 @@ struct PropagationParameters
   double pathLossExpNLOSf;
 
   // Small-scale signal variation parameters
+  double smallScaleSigmaMinLOS;
+  double smallScaleSigmaMaxLOS;
 
-  //! Min/max small scale fading values per link type
-  std::map<LinkType, std::pair<double, double>> smallScaleFading;
+  double smallScaleSigmaMinNLOSv;
+  double smallScaleSigmaMaxNLOSv;
+
+  double smallScaleSigmaMinNLOSb;
+  double smallScaleSigmaMaxNLOSb;
+
+  double smallScaleSigmaMinNLOSf;
+  double smallScaleSigmaMaxNLOSf;
 
   /*!
    * @brief Default constructor using V2V values from GEMV^2.
@@ -55,12 +60,10 @@ struct PropagationParameters
    */
   PropagationParameters ()
     : pathLossExpNLOSb (2.9), pathLossExpNLOSf (2.7),
-      smallScaleFading {
-	{ LinkType::LOS, { 3.3, 5.2 }},
-	{ LinkType::NLOSv, { 3.8, 5.3 }},
-	{ LinkType::NLOSb, { 4.1, 6.8 }},
-	{ LinkType::NLOSf, { 4.1, 6.8 }}
-      }
+      smallScaleSigmaMinLOS (3.3), smallScaleSigmaMaxLOS (5.2),
+      smallScaleSigmaMinNLOSv (3.8), smallScaleSigmaMaxNLOSv (5.3),
+      smallScaleSigmaMinNLOSb (4.1), smallScaleSigmaMaxNLOSb (6.8),
+      smallScaleSigmaMinNLOSf (4.1), smallScaleSigmaMaxNLOSf (6.8)
   {
   }
 
