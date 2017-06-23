@@ -250,6 +250,18 @@ Gemv2PropagationLossModel::CalculateOutOfRangeNoise (
 }
 
 double
+Gemv2PropagationLossModel::CalculateLogDistanceNlosbLoss (double distance) const
+{
+  NS_LOG_FUNCTION (this << distance);
+
+  double dRef = 1.0;
+  double lossRef = gemv2::FreeSpaceLoss (dRef, m_frequency);
+
+  return lossRef +
+      10.0 * m_v2vPropagation.pathLossExpNLOSb * std::log10(distance / dRef);
+}
+
+double
 Gemv2PropagationLossModel::CalculateSimpleNlosvLoss (
     double distance, std::size_t vehiclesInLos) const
 {
@@ -317,11 +329,16 @@ Gemv2PropagationLossModel::DoCalcRxPower (double txPowerDbm,
   NS_ASSERT(a);
   NS_ASSERT(b);
 
+
+  NS_LOG_LOGIC ("Positions: a=" << a->GetPosition () << ", b=" << b->GetPosition ());
+
   // Get positions
   auto positions = std::make_pair (a->GetPosition (), b->GetPosition ());
 
   // calculate distance between both peers
   double distanceLos = CalculateDistance (positions.first, positions.second);
+
+  NS_LOG_LOGIC ("LOS distance: " << distanceLos);
 
   // check if link is in range
   if (!IsLinkInRange(txPowerDbm, distanceLos))
@@ -346,7 +363,7 @@ Gemv2PropagationLossModel::DoCalcRxPower (double txPowerDbm,
   if (m_environment->IntersectsBuildings (lineOfSight))
     {
       NS_LOG_LOGIC("LOS intersects with buildings -> link type: NLOSb");
-      return CalcNlosbRxPower (txPowerDbm, distanceLos);
+      return CalcNlosbRxPower (txPowerDbm, distanceLos, txGainDbi, rxGainDbi);
     }
   else if (m_environment->IntersectsFoliage (lineOfSight))
     {
@@ -411,7 +428,8 @@ Gemv2PropagationLossModel::IsLinkInRange (double /* txPowerDbm */,
 
 double
 Gemv2PropagationLossModel::CalcNlosbRxPower (
-    double txPowerDbm, double distance) const
+    double txPowerDbm, double distance,
+    double txGainDbi, double rxGainDbi) const
 {
   // check range
   if (distance > m_maxNLOSbCommRange)
@@ -423,8 +441,30 @@ Gemv2PropagationLossModel::CalcNlosbRxPower (
 
   NS_LOG_LOGIC ("NLOSb link is in range: " << distance);
 
-  // TODO: implement precise calculation
-  return -std::numeric_limits<double>::max ();
+  double rxPowerLargeScaleDbm = -std::numeric_limits<double>::max ();
+
+  switch (m_modelNLOSb)
+    {
+    case gemv2::NLOSB_MODEL_LOG_DISTANCE:
+      rxPowerLargeScaleDbm = txPowerDbm + txGainDbi + rxGainDbi
+	  - CalculateLogDistanceNlosbLoss (distance);
+      NS_LOG_LOGIC(
+	  "Log distance NLOSb model large scale loss: " <<
+	  (txPowerDbm - rxPowerLargeScaleDbm));
+      break;
+    case gemv2::NLOSB_MODEL_REFLECTION_DIFFRACTION:
+      NS_ASSERT_MSG(false, "NLOSb model not implemented (yet)");
+      break;
+    default:
+      NS_ASSERT_MSG(false, "Unknown NLOSb model");
+      break;
+    }
+
+  /*
+   * TODO: Add small scale variations
+   */
+
+  return rxPowerLargeScaleDbm;
 }
 
 double

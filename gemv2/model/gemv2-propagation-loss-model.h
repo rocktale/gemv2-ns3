@@ -113,6 +113,14 @@ private:
 			    gemv2::LinkType linkType) const;
 
   /*!
+   * @brief Calculate log distance loss for NLOSb links
+   * @param distance	Distance between sender and receiver [m]
+   * @return Path loss (dBm)
+   */
+  double
+  CalculateLogDistanceNlosbLoss (double distance) const;
+
+  /*!
    * @brief Calculate the loss for NLOSv links with the simple model.
    *
    * This model uses free-space propagation together with additional
@@ -166,7 +174,8 @@ private:
   IsLinkInRange (double txPowerDbm, double distance) const;
 
   double
-  CalcNlosbRxPower (double txPowerDbm, double distance) const;
+  CalcNlosbRxPower (double txPowerDbm, double distance,
+		    double txGainDbi, double rxGainDbi) const;
 
   double
   CalcNlosfRxPower (double txPowerDbm, double distance) const;
