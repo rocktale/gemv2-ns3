@@ -14,7 +14,7 @@ struct Configuration
   double freqInGhz = 5.9;		// GHz
   double maxDistanceInMeters = 1000.0; 	// meters
   double distanceStepInMeters = 0.01; 	// meters
-  double txPowerInDbm = 20;		// dBm
+  double txPowerInDbm = 23;		// dBm
   double txHeightInMeters = 1.5;	// meters
   double rxHeightInMeters = 1.5;	// meters
 
