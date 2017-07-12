@@ -46,8 +46,8 @@ namespace gemv2 {
 /*!
  * @brief Class to manage the GEMV^2 environment.
  *
- * This will bundle all actors (vehicles, RSUs) and objects
- * (buildings, foliage) in one place.
+ * This class manages all objects (buildings, foliage, vehicles)
+ * that influence the propagation behavior.
  */
 class Environment : public SimpleRefCount<Environment>
 {
@@ -246,6 +246,9 @@ private:
 
   //! Interval for vehicle tree rebuilds
   Time m_vehicleTreeRebuildInterval;
+
+  //! Force rebuild of the vehicle tree
+  bool m_forceVehicleTreeRebuild;
 };
 
 }  // namespace gemv2

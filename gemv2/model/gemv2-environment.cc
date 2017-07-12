@@ -154,7 +154,8 @@ struct ShapeAdapterTrait<Environment::Data::VehicleTree>
 Environment::Environment()
   : m_data (new Data),
     m_lastVehicleTreeRebuild (-1.0),
-    m_vehicleTreeRebuildInterval (Seconds (1.0))
+    m_vehicleTreeRebuildInterval (Seconds (1.0)),
+    m_forceVehicleTreeRebuild (false)
 {
 }
 
@@ -203,6 +204,23 @@ Environment::AddFoliage (Ptr<Foliage> foliage)
   NS_ASSERT_MSG (foliage, "foliage must not be null");
   m_data->foliage.insert (foliage);
 }
+
+void
+Environment::AddVehicle (Ptr<Vehicle> vehicle)
+{
+  NS_ASSERT_MSG (vehicle, "vehicle must not be null");
+  m_data->vehicles.insert (vehicle);
+  m_forceVehicleTreeRebuild = true;
+}
+
+void
+Environment::RemoveVehicle (Ptr<Vehicle> vehicle)
+{
+  NS_ASSERT_MSG (vehicle, "vehicle must not be null");
+  m_data->vehicles.erase (vehicle);
+  m_forceVehicleTreeRebuild = true;
+}
+
 
 bool
 Environment::IntersectsBuildings (const LineSegment2d& line) const
@@ -345,16 +363,8 @@ Environment::FindAllInEllipse (const Point2d& p1, const Point2d& p2, double rang
 void
 Environment::CheckVehcileTree ()
 {
-  // always rebuild if sizes differ
-  bool rebuildTree = m_data->vehicles.size () != m_data->vehicleTree.size ();
-
-  // check if it is time again
-  if (m_lastVehicleTreeRebuild + m_vehicleTreeRebuildInterval < Simulator::Now ())
-    {
-      rebuildTree = true;
-    }
-
-  if (rebuildTree)
+  if (m_forceVehicleTreeRebuild ||
+      (m_lastVehicleTreeRebuild + m_vehicleTreeRebuildInterval < Simulator::Now ()))
     {
       NS_LOG_LOGIC ("Rebuilding vehicle tree");
 
@@ -370,6 +380,7 @@ Environment::CheckVehcileTree ()
 	}
 
       m_lastVehicleTreeRebuild = Simulator::Now ();
+      m_forceVehicleTreeRebuild = false;
     }
 }
 
