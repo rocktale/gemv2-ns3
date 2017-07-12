@@ -9,3 +9,6 @@ def build(bld):
 
     obj = bld.create_ns3_program('gemv2-buildings-example', ['gemv2', 'stats'])
     obj.source = 'gemv2-buildings-example.cc'
+    
+    obj = bld.create_ns3_program('gemv2-vehicles-example', ['gemv2', 'stats'])
+    obj.source = 'gemv2-vehicles-example.cc'
