@@ -250,18 +250,6 @@ Gemv2PropagationLossModel::CalculateOutOfRangeNoise (
 }
 
 double
-Gemv2PropagationLossModel::CalculateLogDistanceNlosbLoss (double distance) const
-{
-  NS_LOG_FUNCTION (this << distance);
-
-  double dRef = 1.0;
-  double lossRef = gemv2::FreeSpaceLoss (dRef, m_frequency);
-
-  return lossRef +
-      10.0 * m_v2vPropagation.pathLossExpNLOSb * std::log10(distance / dRef);
-}
-
-double
 Gemv2PropagationLossModel::CalculateSimpleNlosvLoss (
     double distance, std::size_t vehiclesInLos) const
 {
@@ -447,7 +435,9 @@ Gemv2PropagationLossModel::CalcNlosbRxPower (
     {
     case gemv2::NLOSB_MODEL_LOG_DISTANCE:
       rxPowerLargeScaleDbm = txPowerDbm + txGainDbi + rxGainDbi
-	  - CalculateLogDistanceNlosbLoss (distance);
+	  - gemv2::LogDistanceLoss(distance,
+				   m_frequency,
+				   m_v2vPropagation.pathLossExpNLOSb);
       NS_LOG_LOGIC(
 	  "Log distance NLOSb model large scale loss: " <<
 	  (txPowerDbm - rxPowerLargeScaleDbm));

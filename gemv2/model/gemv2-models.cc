@@ -39,6 +39,15 @@ FreeSpaceLoss (double distance, double frequency)
       4.0 * constants::pi<double> () * distance * frequency / speedOfLight);
 }
 
+double
+LogDistanceLoss (double distance, double frequency, double pathLossExponent)
+{
+  double dRef = 1.0;
+  double lossRef = FreeSpaceLoss (dRef, frequency);
+
+  return lossRef + 10.0 * pathLossExponent * std::log10(distance / dRef);
+}
+
 
 double
 TwoRayGroundLoss (

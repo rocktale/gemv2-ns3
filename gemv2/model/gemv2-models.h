@@ -35,6 +35,16 @@ double
 FreeSpaceLoss (double distance, double frequency);
 
 /*!
+ * @brief Calculate the log distance loss
+ * @param distance		Distance between sender and receiver
+ * @param frequency		Carrier frequency of the signal
+ * @param pathLossExponent	Path loss exponent
+ * @return Path loss (dBm) according to the log distance model
+ */
+double
+LogDistanceLoss (double distance, double frequency, double pathLossExponent);
+
+/*!
  * @brief Calculate the two ray ground path loss.
  * @param distanceLos	 Distance between sender and receiver (LOS) [m]
  * @param txPos	 	 Exact position of the transmitter antenna [m]

@@ -69,6 +69,12 @@ public:
    */
   ~Gemv2PropagationLossModel ();
 
+  /*
+   * Disable copy construction and assignment to avoid misuse.
+   */
+  Gemv2PropagationLossModel (const Gemv2PropagationLossModel&) = delete;
+  void operator= (const Gemv2PropagationLossModel &) = delete;
+
   /*!
    * @brief Set a custom environment instance to use.
    * @param environment		Environment used for calculations
@@ -77,12 +83,6 @@ public:
   SetEnviroment (Ptr<gemv2::Environment> environment);
 
 private:
-
-  /*
-   * Disable copy construction and assignment to avoid misuse.
-   */
-  Gemv2PropagationLossModel (const Gemv2PropagationLossModel&) = delete;
-  void operator= (const Gemv2PropagationLossModel &) = delete;
 
   /*!
    * @brief Calculate the small scale variations for a link.
@@ -111,14 +111,6 @@ private:
   CalculateOutOfRangeNoise (double txPower,
 			    double distance,
 			    gemv2::LinkType linkType) const;
-
-  /*!
-   * @brief Calculate log distance loss for NLOSb links
-   * @param distance	Distance between sender and receiver [m]
-   * @return Path loss (dBm)
-   */
-  double
-  CalculateLogDistanceNlosbLoss (double distance) const;
 
   /*!
    * @brief Calculate the loss for NLOSv links with the simple model.
