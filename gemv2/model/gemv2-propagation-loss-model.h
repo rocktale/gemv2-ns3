@@ -167,6 +167,8 @@ private:
 
   double
   CalcNlosbRxPower (double txPowerDbm, double distance,
+		    const gemv2::LineSegment2d& lineOfSight,
+		    const VehiclePair& involvedVehicles,
 		    double txGainDbi, double rxGainDbi) const;
 
   double

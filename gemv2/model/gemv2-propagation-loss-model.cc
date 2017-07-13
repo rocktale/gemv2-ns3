@@ -351,7 +351,9 @@ Gemv2PropagationLossModel::DoCalcRxPower (double txPowerDbm,
   if (m_environment->IntersectsBuildings (lineOfSight))
     {
       NS_LOG_LOGIC("LOS intersects with buildings -> link type: NLOSb");
-      return CalcNlosbRxPower (txPowerDbm, distanceLos, txGainDbi, rxGainDbi);
+      return CalcNlosbRxPower (txPowerDbm, distanceLos,
+			       lineOfSight, involvedVehicles,
+			       txGainDbi, rxGainDbi);
     }
   else if (m_environment->IntersectsFoliage (lineOfSight))
     {
@@ -417,6 +419,8 @@ Gemv2PropagationLossModel::IsLinkInRange (double /* txPowerDbm */,
 double
 Gemv2PropagationLossModel::CalcNlosbRxPower (
     double txPowerDbm, double distance,
+    const gemv2::LineSegment2d& lineOfSight,
+    const VehiclePair& involvedVehicles,
     double txGainDbi, double rxGainDbi) const
 {
   // check range
@@ -451,10 +455,25 @@ Gemv2PropagationLossModel::CalcNlosbRxPower (
     }
 
   /*
-   * TODO: Add small scale variations
+   * And now the small scale loss...
    */
 
-  return rxPowerLargeScaleDbm;
+  auto objectsInRange =
+      GetObjectsInComEllipse(lineOfSight, m_maxNLOSvCommRange, involvedVehicles);
+
+  double smallScaleVariation =
+      CalculateSmallScaleVariations (
+	  boost::geometry::length (lineOfSight),
+	  m_maxNLOSbCommRange,
+	  objectsInRange,
+	  m_v2vPropagation.smallScaleSigmaMinNLOSb,
+	  m_v2vPropagation.smallScaleSigmaMaxNLOSb);
+
+  NS_LOG_LOGIC ("Small scale variation: " << smallScaleVariation);
+
+  auto rxPowerDbm = rxPowerLargeScaleDbm - smallScaleVariation;
+  NS_LOG_LOGIC ("Received power: " << rxPowerDbm);
+  return rxPowerDbm;
 }
 
 double
@@ -532,9 +551,9 @@ Gemv2PropagationLossModel::CalcNlosvRxPower (
 	  m_v2vPropagation.smallScaleSigmaMaxNLOSv);
   NS_LOG_LOGIC ("Small scale variation: " << smallScaleVariation);
 
-  return rxPowerLargeScaleDbm - smallScaleVariation;
-
-
+  auto rxPowerDbm = rxPowerLargeScaleDbm - smallScaleVariation;
+  NS_LOG_LOGIC ("Received power: " << rxPowerDbm);
+  return rxPowerDbm;
 }
 
 double
@@ -577,8 +596,9 @@ Gemv2PropagationLossModel::CalcLosRxPower (
 	  m_v2vPropagation.smallScaleSigmaMaxLOS);
   NS_LOG_LOGIC ("Small scale variation: " << smallScaleVariation);
 
-  return rxPowerLargeScaleDbm - smallScaleVariation;
-}
+  auto rxPowerDbm = rxPowerLargeScaleDbm - smallScaleVariation;
+  NS_LOG_LOGIC ("Received power: " << rxPowerDbm);
+  return rxPowerDbm;}
 
 
 }
