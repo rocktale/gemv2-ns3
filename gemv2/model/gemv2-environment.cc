@@ -221,6 +221,11 @@ Environment::RemoveVehicle (Ptr<Vehicle> vehicle)
   m_forceVehicleTreeRebuild = true;
 }
 
+void
+Environment::ForceVehicleTreeRebuild ()
+{
+  m_forceVehicleTreeRebuild = true;
+}
 
 bool
 Environment::IntersectsBuildings (const LineSegment2d& line) const

@@ -141,6 +141,12 @@ public:
   RemoveVehicle (Ptr<Vehicle> vehicle);
 
   /*!
+   * @brief Force rebuild of the vehicle tree
+   */
+  void
+  ForceVehicleTreeRebuild ();
+
+  /*!
    * @brief Test if line intersects with any buildings
    * @param line 	Line to test
    * @return True if line intersects at least with one building
