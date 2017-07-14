@@ -2,7 +2,7 @@
 Implementation of the GEMV^2 propagation model for the network simulator ns-3.
 
 For more information visit http://vehicle2x.net.
-However, this work is not affiliated with the original author of the model.
+However, this project is not affiliated with the original author of the model.
 
 *NOTE: This is currently work in progress. Don't expect it to work (yet). Please come back later.*
 
@@ -22,7 +22,7 @@ However, this work is not affiliated with the original author of the model.
 * NLOSb reflection and diffraction model
 * Import functions for building and foliage outlines
 * Automated management of vehicles, e.g. through the  `MobilityModel` of a `Node`
-* Tests, tests, test, ...
+* Tests, tests, tests, ...
 * Optimization...
 
 
