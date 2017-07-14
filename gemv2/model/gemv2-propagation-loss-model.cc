@@ -158,17 +158,20 @@ Gemv2PropagationLossModel::GetTypeId (void)
 }
 
 Gemv2PropagationLossModel::Gemv2PropagationLossModel () :
-    m_environment (gemv2::Environment::GetGlobal ()), m_frequency (
-	DEFAULT_FREQUENCY), m_antennaPolarization (
-	DEFAULT_ANTENNA_POLARIZATION), m_groundPermittivity (
-	DEFAULT_GROUND_PERMITTIVITY), m_maxLOSCommRange (
-	DEFAULT_MAX_LOS_COMM_RANGE), m_maxNLOSvCommRange (
-	DEFAULT_MAX_NLOSV_COMM_RANGE), m_maxNLOSbCommRange (
-	DEFAULT_MAX_NLOSB_COMM_RANGE), m_modelNLOSv (DEFAULT_NLOSV_MODEL), m_lossPerVehicleNLOSvSimple (
-	DEFAULT_LOSS_PER_VEHICLE_NLOSV_SIMPLE), m_modelNLOSb (
-	DEFAULT_NLOSB_MODEL), m_maxVehicleDensity (DEFAULT_MAX_VEHICLE_DENSITY), m_maxObjectDensity (
-	DEFAULT_MAX_OBJECT_DENSITY), m_normalRand (
-	CreateObject<NormalRandomVariable> ())
+    m_environment (gemv2::Environment::GetGlobal ()),
+    m_frequency (DEFAULT_FREQUENCY),
+    m_antennaPolarization (DEFAULT_ANTENNA_POLARIZATION),
+    m_groundPermittivity (DEFAULT_GROUND_PERMITTIVITY),
+    m_maxLOSCommRange (DEFAULT_MAX_LOS_COMM_RANGE),
+    m_maxNLOSvCommRange (DEFAULT_MAX_NLOSV_COMM_RANGE),
+    m_maxNLOSbCommRange (DEFAULT_MAX_NLOSB_COMM_RANGE),
+    m_modelNLOSv (DEFAULT_NLOSV_MODEL),
+    m_lossPerVehicleNLOSvSimple (DEFAULT_LOSS_PER_VEHICLE_NLOSV_SIMPLE),
+    m_modelNLOSb (DEFAULT_NLOSB_MODEL),
+    m_maxVehicleDensity (DEFAULT_MAX_VEHICLE_DENSITY),
+    m_maxObjectDensity (DEFAULT_MAX_OBJECT_DENSITY),
+    m_forceDeterminstic (false),
+    m_normalRand (CreateObject<NormalRandomVariable> ())
 {
   NS_LOG_FUNCTION(this);
 }
@@ -185,6 +188,13 @@ Gemv2PropagationLossModel::SetEnviroment (Ptr<gemv2::Environment> environment)
   m_environment = environment;
 }
 
+void
+Gemv2PropagationLossModel::ForceDeterminstic (bool determinstic)
+{
+  NS_LOG_FUNCTION (this << determinstic);
+  m_forceDeterminstic = determinstic;
+}
+
 double
 Gemv2PropagationLossModel::CalculateSmallScaleVariations (
     double distance2d, double comRange,
@@ -192,6 +202,12 @@ Gemv2PropagationLossModel::CalculateSmallScaleVariations (
     double sigmaMin, double sigmaMax) const
 {
   NS_LOG_FUNCTION(this);
+
+  if (m_forceDeterminstic)
+    {
+      // no need to calculate anything
+      return 0;
+    }
 
   // calculate area of the ellipse
   double a = comRange / 2.0;

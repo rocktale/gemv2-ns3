@@ -82,6 +82,18 @@ public:
   void
   SetEnviroment (Ptr<gemv2::Environment> environment);
 
+  /*!
+   * @brief Enable/disable deterministic mode of the model
+   *
+   * If enabled, all random components like small scale variations will be
+   * disabled (set to 0). Thus, the model will behave deterministically yet
+   * less realistic.
+   *
+   * @param determinstic Set to true to disable the random components of the model
+   */
+  void
+  ForceDeterminstic (bool determinstic);
+
 private:
 
   /*!
@@ -238,6 +250,9 @@ private:
 
   //! Maximum area (km^2) occupied by objects per km^2
   double m_maxObjectDensity;
+
+  //! Disable all random components of the propagation model
+  bool m_forceDeterminstic;
 
   /*
    * Random variables
