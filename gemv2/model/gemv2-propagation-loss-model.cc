@@ -59,8 +59,8 @@ constexpr ns3::gemv2::NLOSvModelType DEFAULT_NLOSV_MODEL =
     ns3::gemv2::NLOSV_MODEL_SIMPLE;
 
 // NLOSv vehicle loss for the simple model
-constexpr ns3::gemv2::MinMedMaxDoubleValue DEFAULT_LOSS_PER_VEHICLE_NLOSV_SIMPLE =
-  { 2.0, 6.0, 10.0 };
+constexpr ns3::gemv2::MinMedMaxDoubleValue
+  DEFAULT_LOSS_PER_VEHICLE_NLOSV_SIMPLE{ 2.0, 6.0, 10.0 };
 
 // Model for NLOSb links
 constexpr ns3::gemv2::NLOSbModelType DEFAULT_NLOSB_MODEL =
