@@ -364,14 +364,14 @@ Gemv2PropagationLossModel::DoCalcRxPower (double txPowerDbm,
   double rxGainDbi = 0.0;	// TODO: get rx gain from antenna model
 
   // First we check for obstructing buildings
-  if (m_environment->IntersectsBuildings (lineOfSight))
+  if (m_environment->IntersectsAnyBuildings (lineOfSight))
     {
       NS_LOG_LOGIC("LOS intersects with buildings -> link type: NLOSb");
       return CalcNlosbRxPower (txPowerDbm, distanceLos,
 			       lineOfSight, involvedVehicles,
 			       txGainDbi, rxGainDbi);
     }
-  else if (m_environment->IntersectsFoliage (lineOfSight))
+  else if (m_environment->IntersectsAnyFoliage (lineOfSight))
     {
       NS_LOG_LOGIC("LOS intersects with foliage -> link type: NLOSf");
       return CalcNlosfRxPower (txPowerDbm, distanceLos);
@@ -379,10 +379,7 @@ Gemv2PropagationLossModel::DoCalcRxPower (double txPowerDbm,
   else
     {
       // vehicles in LOS - will only be filled for NLOSv links
-      gemv2::Environment::VehicleList vehiclesInLos;
-
-      // No buildings or foliage, check for obstructing vehicles
-      m_environment->Intersect (lineOfSight, vehiclesInLos);
+      auto vehiclesInLos = m_environment->IntersectVehicles (lineOfSight);
 
       // remove involved vehicles from list
       RemoveVehicles (vehiclesInLos, involvedVehicles);

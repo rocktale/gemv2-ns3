@@ -228,56 +228,63 @@ Environment::ForceVehicleTreeRebuild ()
 }
 
 bool
-Environment::IntersectsBuildings (const LineSegment2d& line) const
+Environment::IntersectsAnyBuildings (const LineSegment2d& line) const
 {
   NS_LOG_FUNCTION (this << boost::geometry::wkt (line));
   return IntersectsAny (m_data->buildings, line);
 }
 
 bool
-Environment::IntersectsFoliage (const LineSegment2d& line) const
+Environment::IntersectsAnyFoliage (const LineSegment2d& line) const
 {
   NS_LOG_FUNCTION (this << boost::geometry::wkt (line));
   return IntersectsAny (m_data->foliage, line);
 }
 
-
-void
-Environment::Intersect (const LineSegment2d& line, BuildingList& outBuildings)
+Environment::BuildingList
+Environment::IntersectBuildings (const LineSegment2d& line) const
 {
   NS_LOG_FUNCTION (this << boost::geometry::wkt (line));
+  BuildingList intersectingBuildings;
   FindObjectsThatIntersect (m_data->buildings, line,
-			    std::back_inserter(outBuildings));
-  NS_LOG_LOGIC ("Found " << outBuildings.size ()
+			    std::back_inserter(intersectingBuildings));
+  NS_LOG_LOGIC ("Found " << intersectingBuildings.size ()
 		<< " intersections with buildings");
+  return intersectingBuildings;
 }
 
-void
-Environment::Intersect (const LineSegment2d& line, FoliageList& outFoliage)
+Environment::FoliageList
+Environment::IntersectFoliage (const LineSegment2d& line) const
 {
   NS_LOG_FUNCTION (this << boost::geometry::wkt (line));
+  FoliageList intersectingFoliage;
   FindObjectsThatIntersect (m_data->foliage, line,
-			    std::back_inserter(outFoliage));
-  NS_LOG_LOGIC ("Found " << outFoliage.size ()
+			    std::back_inserter(intersectingFoliage));
+  NS_LOG_LOGIC ("Found " << intersectingFoliage.size ()
 		<< " intersections with foliage");
+  return intersectingFoliage;
 }
 
-void
-Environment::Intersect (const LineSegment2d& line, VehicleList& outVehicles)
+Environment::VehicleList
+Environment::IntersectVehicles (const LineSegment2d& line)
 {
   NS_LOG_FUNCTION (this << boost::geometry::wkt (line));
 
   // update the vehicle tree if necessary
   CheckVehcileTree ();
 
+  VehicleList intersectingVehicles;
+
   FindObjectsThatIntersect (
       m_data->vehicleTree, line,
       boost::make_function_output_iterator(
-	  [&outVehicles](const typename Data::VehicleTree::value_type& v)
-	  { outVehicles.push_back (v.second); }));
+	  [&intersectingVehicles](const typename Data::VehicleTree::value_type& v)
+	  { intersectingVehicles.push_back (v.second); }));
 
-  NS_LOG_LOGIC ("Found " << outVehicles.size ()
+  NS_LOG_LOGIC ("Found " << intersectingVehicles.size ()
 		<< " intersections with vehicles");
+
+  return intersectingVehicles;
 }
 
 void

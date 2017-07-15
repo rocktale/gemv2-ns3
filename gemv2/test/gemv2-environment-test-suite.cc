@@ -48,26 +48,16 @@ Gemv2BuildingIntersectionTestCase::DoRun (void)
   gemv2::LineSegment2d one ({25,0}, {50, 25});
   gemv2::LineSegment2d two ({0,0}, {100, 100});
 
-  NS_TEST_ASSERT_MSG_EQ (env->IntersectsBuildings (none), false,
+  NS_TEST_ASSERT_MSG_EQ (env->IntersectsAnyBuildings (none), false,
 			 "Should not intersect any building");
-  NS_TEST_ASSERT_MSG_EQ (env->IntersectsBuildings (one), true,
+  NS_TEST_ASSERT_MSG_EQ (env->IntersectsAnyBuildings (one), true,
 			 "Should intersect at least one building");
-  NS_TEST_ASSERT_MSG_EQ (env->IntersectsBuildings (two), true,
+  NS_TEST_ASSERT_MSG_EQ (env->IntersectsAnyBuildings (two), true,
 			 "Should intersect at least one building");
 
-  gemv2::Environment::BuildingList buildings;
-
-  env->Intersect (none, buildings);
-  NS_TEST_ASSERT_MSG_EQ (buildings.size (), 0, "Should not intersect");
-  buildings.clear ();
-
-  env->Intersect (one, buildings);
-  NS_TEST_ASSERT_MSG_EQ (buildings.size (), 1, "Should intersect once");
-  buildings.clear ();
-
-  env->Intersect (two, buildings);
-  NS_TEST_ASSERT_MSG_EQ (buildings.size (), 2, "Should intersect twice");
-  buildings.clear ();
+  NS_TEST_ASSERT_MSG_EQ (env->IntersectBuildings (none).size (), 0, "Should not intersect");
+  NS_TEST_ASSERT_MSG_EQ (env->IntersectBuildings (one).size (), 1, "Should intersect once");
+  NS_TEST_ASSERT_MSG_EQ (env->IntersectBuildings (two).size (), 2, "Should intersect twice");
 }
 
 
@@ -113,24 +103,20 @@ Gemv2VehicleIntersectionTestCase::DoRun (void)
   gemv2::LineSegment2d truck ({6, 10}, {6, 50});
   gemv2::LineSegment2d small ({24.5, 0}, {25.5, 70});
 
-  // list of vehicles, used to store results
-  gemv2::Environment::VehicleList iv;
-
-  env->Intersect (truck, iv);
+  auto iv = env->IntersectVehicles (truck);
   NS_TEST_ASSERT_MSG_EQ (iv.size (), 1, "Should intersect one vehicle");
   NS_TEST_ASSERT_MSG_EQ (iv.front (), vehicles.at(1), "Should intersect the truck");
-  iv.clear ();
 
   // update truck heading and rebuild tree
   vehicles[1]->SetHeading (180);
   env->ForceVehicleTreeRebuild ();
 
-  env->Intersect (truck, iv);
+  iv = env->IntersectVehicles (truck);
   NS_TEST_ASSERT_MSG_EQ (iv.size (), 0, "Should intersect no vehicle anymore");
   iv.clear ();
 
   // check small vehicle
-  env->Intersect (small, iv);
+  iv = env->IntersectVehicles (small);
   NS_TEST_ASSERT_MSG_EQ (iv.size (), 1, "Should intersect one vehicle");
   NS_TEST_ASSERT_MSG_EQ (iv.front (), vehicles.at(0), "Should intersect the small vehicle");
   iv.clear ();
@@ -141,12 +127,12 @@ Gemv2VehicleIntersectionTestCase::DoRun (void)
   vehicles[1]->SetHeading (45);
   env->ForceVehicleTreeRebuild ();
 
-  env->Intersect (small, iv);
+  iv = env->IntersectVehicles (small);
   NS_TEST_ASSERT_MSG_EQ (iv.size (), 2, "Should intersect both vehicles");
   iv.clear ();
 
   // test with ray slightly off the tilted truck
-  env->Intersect (gemv2::LineSegment2d ({13, 21}, {33, 41}), iv);
+  iv = env->IntersectVehicles (gemv2::LineSegment2d ({13, 21}, {33, 41}));
   NS_TEST_ASSERT_MSG_EQ (iv.size (), 0, "Should not intersect any vehicle");
 }
 

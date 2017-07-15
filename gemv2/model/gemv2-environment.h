@@ -152,7 +152,7 @@ public:
    * @return True if line intersects at least with one building
    */
   bool
-  IntersectsBuildings (const LineSegment2d& line) const;
+  IntersectsAnyBuildings (const LineSegment2d& line) const;
 
   /*!
    * @brief Test if line intersects with any foliage
@@ -160,31 +160,35 @@ public:
    * @return True if line intersects at least with one foliage object
    */
   bool
-  IntersectsFoliage (const LineSegment2d& line) const;
+  IntersectsAnyFoliage (const LineSegment2d& line) const;
 
   /*!
    * @brief Calculate intersection of a line segment with buildings.
    * @param line		Line to calculate the intersections for
-   * @param outBuildings 	Buildings intersecting with @a line
+   * @return Buildings intersecting with @a line
    */
-  void
-  Intersect (const LineSegment2d& line, BuildingList& outBuildings);
+  BuildingList
+  IntersectBuildings (const LineSegment2d& line) const;
 
   /*!
    * @brief Calculate intersection of a line segment with foliage objects.
    * @param line		Line to calculate the intersections for
-   * @param outFoliage	 	Foliage objects intersecting with @a line
+   * @return Foliage objects intersecting with @a line
    */
-  void
-  Intersect (const LineSegment2d& line, FoliageList& outFoliage);
+  FoliageList
+  IntersectFoliage (const LineSegment2d& line) const;
 
   /*!
    * @brief Calculate intersection of a line segment with vehicles.
+   *
+   * @note This method is not @c const since it may trigger rebuilding
+   * 	   the internal vehicle tree.
+   *
    * @param line		Line to calculate the intersections for
-   * @param outVehicles	 	Vehicles intersecting with @a line
+   * @return Vehicles intersecting with @a line
    */
-  void
-  Intersect (const LineSegment2d& line, VehicleList& outVehicles);
+  VehicleList
+  IntersectVehicles (const LineSegment2d& line);
 
   /*!
    * @brief Find all buildings in ellipse.
