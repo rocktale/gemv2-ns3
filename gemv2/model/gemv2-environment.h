@@ -195,47 +195,41 @@ public:
    * @param p1			First focal point of the ellipse
    * @param p2			Second focal point of the ellipse
    * @param range		Length of the major diameter
-   * @param outBuildings	Buildings where the sum of distance to @a p1 and
-   * 				@a p2 is less than @a range.
+   * @return Buildings where the sum of distance to @a p1 and @a p2 is less than @a range.
    */
-  void
-  FindInEllipse (const Point2d& p1, const Point2d& p2, double range,
-		 BuildingList& outBuildings);
+  BuildingList
+  FindBuildingsInEllipse (const Point2d& p1, const Point2d& p2, double range) const;
 
   /*!
    * @brief Find all foliage in ellipse.
    * @param p1			First focal point of the ellipse
    * @param p2			Second focal point of the ellipse
    * @param range		Length of the major diameter
-   * @param outFoliage		Foliage where the sum of distance to @a p1 and
-   * 				@a p2 is less than @a range.
+   * @return Foliage where the sum of distance to @a p1 and @a p2 is less than @a range.
    */
-  void
-  FindInEllipse (const Point2d& p1, const Point2d& p2, double range,
-		 FoliageList& outFoliage);
+  FoliageList
+  FindFoliageInEllipse (const Point2d& p1, const Point2d& p2, double range) const;
 
   /*!
    * @brief Find all vehicles in ellipse.
    * @param p1			First focal point of the ellipse
    * @param p2			Second focal point of the ellipse
    * @param range		Length of the major diameter
-   * @param outVehicles 	Vehicles where the sum of distance to @a p1 and
-   * 				@a p2 is less than @a range.
+   * @return Vehicles where the sum of distance to @a p1 and @a p2 is less than @a range.
    */
-  void
-  FindInEllipse (const Point2d& p1, const Point2d& p2, double range,
-		 VehicleList& outVehicles);
+  VehicleList
+  FindVehiclesInEllipse (const Point2d& p1, const Point2d& p2, double range);
 
   /*!
    * @brief Find all objects in ellipse.
    * @param p1			First focal point
    * @param p2			Second focal point
    * @param range		Maximum combined distance to @a p1 and @a p2
-   * @param outObjects		Found objects in ellipse are added here
+   * @return All objects where the sum of distance to @a p1 and @a p2 is less than @a range.
    */
-  void
-  FindAllInEllipse (const Point2d& p1, const Point2d& p2, double range,
-		    ObjectCollection& outObjects);
+  ObjectCollection
+  FindAllObjectsInEllipse (const Point2d& p1, const Point2d& p2, double range);
+
 
   //! Internal data structures moved to the implementation file.
   struct Data;

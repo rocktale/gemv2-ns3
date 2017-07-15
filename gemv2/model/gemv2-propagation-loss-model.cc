@@ -302,20 +302,12 @@ Gemv2PropagationLossModel::GetObjectsInComEllipse (
     const VehiclePair& involvedVehicles) const
 {
   // Find all objects in joint communication ellipse
-  gemv2::Environment::ObjectCollection jointObjects;
-  m_environment->FindAllInEllipse (lineOfSight.first, lineOfSight.second,
-				   comRange, jointObjects);
+  auto jointObjects = m_environment->FindAllObjectsInEllipse (
+      lineOfSight.first, lineOfSight.second, comRange);
 
   // remove sender and receiver from list
   RemoveVehicles (jointObjects.vehicles, involvedVehicles);
 
-  /*
-   * A quick note on efficiency here: This should not trigger a
-   * copy operation. Most compilers will use NRVO (named return value
-   * optimization) and create the return value direct in the place
-   * of the return value skipping any copies. If this is not possible
-   * the return value will at least be moved instead of copying it.
-   */
   return jointObjects;
 }
 

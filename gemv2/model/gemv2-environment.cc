@@ -287,62 +287,71 @@ Environment::IntersectVehicles (const LineSegment2d& line)
   return intersectingVehicles;
 }
 
-void
-Environment::FindInEllipse (const Point2d& p1, const Point2d& p2, double range,
-			    BuildingList& outBuildings)
+Environment::BuildingList
+Environment::FindBuildingsInEllipse (const Point2d& p1, const Point2d& p2, double range) const
 {
   NS_LOG_FUNCTION (
       this << boost::geometry::wkt (p1) << boost::geometry::wkt (p2) << range);
+
+  BuildingList buildings;
 
   FindObjectsInEllipse (
       m_data->buildings, p1, p2, range,
-      std::back_inserter(outBuildings));
+      std::back_inserter(buildings));
 
-  NS_LOG_LOGIC ("Found " << outBuildings.size () << " buildings in ellipse r="
+  NS_LOG_LOGIC ("Found " << buildings.size () << " buildings in ellipse r="
 		<< range << "m around " << boost::geometry::wkt (p1)
 		<< " and " << boost::geometry::wkt (p2));
+
+  return buildings;
 }
 
-void
-Environment::FindInEllipse (const Point2d& p1, const Point2d& p2, double range,
-		 FoliageList& outFoliage)
+Environment::FoliageList
+Environment::FindFoliageInEllipse (const Point2d& p1, const Point2d& p2, double range) const
 {
   NS_LOG_FUNCTION (
       this << boost::geometry::wkt (p1) << boost::geometry::wkt (p2) << range);
 
+  FoliageList foliage;
+
   FindObjectsInEllipse (
       m_data->foliage, p1, p2, range,
-      std::back_inserter(outFoliage));
+      std::back_inserter(foliage));
 
-  NS_LOG_LOGIC ("Found " << outFoliage.size () << " foliage objects in ellipse r="
+  NS_LOG_LOGIC ("Found " << foliage.size () << " foliage objects in ellipse r="
 		<< range << "m around " << boost::geometry::wkt (p1)
 		<< " and " << boost::geometry::wkt (p2));
+
+  return foliage;
 }
 
 
-void
-Environment::FindInEllipse (const Point2d& p1, const Point2d& p2, double range,
-		 VehicleList& outVehicles)
+Environment::VehicleList
+Environment::FindVehiclesInEllipse (const Point2d& p1, const Point2d& p2, double range)
 {
   NS_LOG_FUNCTION (
       this << boost::geometry::wkt (p1) << boost::geometry::wkt (p2) << range);
 
   CheckVehcileTree ();
+
+  VehicleList vehicles;
+
   FindObjectsInEllipse (
       m_data->vehicleTree, p1, p2, range,
       boost::make_function_output_iterator(
-      	  [&outVehicles](const typename Data::VehicleTree::value_type& v)
-      	  { outVehicles.push_back (v.second); })
+      	  [&vehicles](const typename Data::VehicleTree::value_type& v)
+      	  { vehicles.push_back (v.second); })
       );
 
-  NS_LOG_LOGIC ("Found " << outVehicles.size () << " vehicles in ellipse r="
+  NS_LOG_LOGIC ("Found " << vehicles.size () << " vehicles in ellipse r="
 		<< range << "m around " << boost::geometry::wkt (p1)
 		<< " and " << boost::geometry::wkt (p2));
+
+  return vehicles;
 }
 
-void
-Environment::FindAllInEllipse (const Point2d& p1, const Point2d& p2, double range,
-			       ObjectCollection& outObjects)
+Environment::ObjectCollection
+Environment::FindAllObjectsInEllipse (const Point2d& p1, const Point2d& p2, double range)
 {
   NS_LOG_FUNCTION (
       this << boost::geometry::wkt (p1) << boost::geometry::wkt (p2) << range);
@@ -352,24 +361,28 @@ Environment::FindAllInEllipse (const Point2d& p1, const Point2d& p2, double rang
 
   NS_LOG_LOGIC ("Bounding box: " << boost::geometry::wkt (bBox));
 
+  ObjectCollection objects;
+
   // collect buildings
   FindObjectsInEllipse (
       m_data->buildings, bBox, p1, p2, range,
-      std::back_inserter(outObjects.buildings));
+      std::back_inserter(objects.buildings));
 
   // collect foliage
   FindObjectsInEllipse (
       m_data->foliage, bBox, p1, p2, range,
-      std::back_inserter(outObjects.foliage));
+      std::back_inserter(objects.foliage));
 
   // collect vehicles
   CheckVehcileTree ();
   FindObjectsInEllipse (
       m_data->vehicleTree, bBox, p1, p2, range,
       boost::make_function_output_iterator(
-      	  [&outObjects](const typename Data::VehicleTree::value_type& v)
-      	  { outObjects.vehicles.push_back (v.second); })
+      	  [&objects](const typename Data::VehicleTree::value_type& v)
+      	  { objects.vehicles.push_back (v.second); })
       );
+
+  return objects;
 }
 
 void
