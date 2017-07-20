@@ -27,6 +27,7 @@
 
 #include <ns3/mobility-model.h>
 #include <ns3/gemv2-models.h>
+#include "gemv2-vehicle-adapter.h"
 
 /*
  * Definition of default values used in the attributes and the default
@@ -88,6 +89,24 @@ RemoveVehicles (
   if (v.second)
     {
       l.erase (std::remove (l.begin (), l.end (), v.second), l.end ());
+    }
+}
+
+ns3::Ptr<ns3::gemv2::Vehicle>
+GetVehicleFromMobility (ns3::Ptr<ns3::MobilityModel> mob)
+{
+  if (!mob)
+    {
+      return nullptr;
+    }
+
+  if (auto adapter = mob->GetObject<ns3::Gemv2VehicleAdapter> ())
+    {
+      return adapter->GetVehicle ();
+    }
+  else
+    {
+      return nullptr;
     }
 }
 
@@ -349,8 +368,8 @@ Gemv2PropagationLossModel::DoCalcRxPower (double txPowerDbm,
 				    gemv2::MakePoint2d (positions.second));
 
   // Get involved vehicles (if set and available)
-  auto involvedVehicles = VehiclePair (a->GetObject<gemv2::Vehicle> (),
-				       b->GetObject<gemv2::Vehicle> ());
+  auto involvedVehicles = VehiclePair (GetVehicleFromMobility (a),
+				       GetVehicleFromMobility (b));
 
   double txGainDbi = 0.0;	// TODO: get tx gain from antenna model
   double rxGainDbi = 0.0;	// TODO: get rx gain from antenna model

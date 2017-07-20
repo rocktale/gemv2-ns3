@@ -17,6 +17,7 @@ def build(bld):
         'model/gemv2-models.cc',
         'model/gemv2-propagation-loss-model.cc',
         'model/gemv2-vehicle.cc',
+        'model/gemv2-vehicle-adapter.cc',
         'helper/gemv2-helper.cc',
         ]
 
@@ -41,6 +42,7 @@ def build(bld):
         'model/gemv2-rtree-queries.h',
         'model/gemv2-types.h',
         'model/gemv2-vehicle.h',
+        'model/gemv2-vehicle-adapter.h',
         'helper/gemv2-helper.h',
         ]
 

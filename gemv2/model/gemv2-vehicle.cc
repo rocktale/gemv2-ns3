@@ -33,18 +33,6 @@ NS_LOG_COMPONENT_DEFINE("Gemv2Vehicle");
 
 namespace gemv2 {
 
-NS_OBJECT_ENSURE_REGISTERED(Vehicle);
-
-TypeId
-Vehicle::GetTypeId (void)
-{
-  static TypeId tid = TypeId ("ns3::gemv2::Vehicle")
-      .SetParent<Object> ()
-       ;
-  return tid;
-}
-
-
 Vehicle::Vehicle (double length, double width, double height)
   : m_height (height),
     m_position (0, 0, 0),

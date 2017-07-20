@@ -18,7 +18,8 @@
 #ifndef GEMV2_VEHICLE_H
 #define GEMV2_VEHICLE_H
 
-#include <ns3/object.h>
+#include <ns3/ptr.h>
+#include <ns3/simple-ref-count.h>
 #include <ns3/vector.h>
 #include <ns3/gemv2-geometry.h>
 
@@ -28,21 +29,13 @@ namespace gemv2 {
 /*!
  * @brief A single vehicle within the GEMV^2 environment.
  *
- * Vehicles can be assigned to a node, i.e. the vehicle is equipped
- * and therefore also a ns-3 node. However, they can also appear
- * independently, e.g. non-equipped or inactive (parked) vehicles.
+ * Vehicles appear independent from nodes. Since there may be many
+ * more vehicles in a scenario than actually communicating (equipped)
+ * ones.
  */
-class Vehicle : public Object
+class Vehicle : public SimpleRefCount<Vehicle>
 {
 public:
-
-  /*!
-   * @brief Get the type id of this  object.
-   * @return Object type id
-   */
-  static TypeId
-  GetTypeId (void);
-
   /*!
    * @brief Create vehicle with the provided dimensions.
    *
